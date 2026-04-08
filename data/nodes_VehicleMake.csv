@@ -1,0 +1,15 @@
+:ID,:LABEL,make_name,country_of_origin,parent_company,founded_year,market_segment,active_recalls_2015,total_claims_in_dataset,avg_claim_amount,fraud_rate_pct,avg_vehicle_age_in_claims,total_loss_rate_pct
+MAKE-Saab,VehicleMake,Saab,Sweden,General Motors (at time),1945,Premium,4,80,51445.38,22.5,11.2,32.5
+MAKE-Mercedes,VehicleMake,Mercedes,Germany,Daimler AG,1926,Luxury,3,65,52372.15,33.8,10.0,35.4
+MAKE-Dodge,VehicleMake,Dodge,USA,Fiat Chrysler,1900,Mainstream,5,80,55944.38,25.0,10.4,31.2
+MAKE-Chevrolet,VehicleMake,Chevrolet,USA,General Motors,1911,Mainstream,1,76,52746.58,27.6,9.5,25.0
+MAKE-Accura,VehicleMake,Accura,Japan,Honda Motor Co,1986,Premium,5,68,52518.82,19.1,10.7,27.9
+MAKE-Nissan,VehicleMake,Nissan,Japan,Nissan Motor Co,1933,Mainstream,0,78,51545.26,17.9,9.5,23.1
+MAKE-Audi,VehicleMake,Audi,Germany,Volkswagen Group,1909,Luxury,4,69,54383.77,30.4,9.6,33.3
+MAKE-Toyota,VehicleMake,Toyota,Japan,Toyota Motor Corp,1937,Mainstream,1,70,46523.71,18.6,8.7,21.4
+MAKE-Ford,VehicleMake,Ford,USA,Ford Motor Company,1903,Mainstream,4,72,56570.14,30.6,9.0,26.4
+MAKE-Suburu,VehicleMake,Suburu,Japan,Fuji Heavy Industries,1953,Mainstream,4,80,53730.12,23.8,10.5,31.2
+MAKE-BMW,VehicleMake,BMW,Germany,BMW Group,1916,Luxury,0,72,55905.28,27.8,9.7,26.4
+MAKE-Jeep,VehicleMake,Jeep,USA,Fiat Chrysler,1941,Mainstream,5,67,51608.81,16.4,9.3,28.4
+MAKE-Honda,VehicleMake,Honda,Japan,Honda Motor Co,1948,Mainstream,1,55,51714.91,25.5,10.8,25.5
+MAKE-Volkswagen,VehicleMake,Volkswagen,Germany,Volkswagen Group,1937,Mainstream,1,68,50854.85,27.9,9.6,23.5

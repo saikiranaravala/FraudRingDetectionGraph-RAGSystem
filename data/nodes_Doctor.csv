@@ -1,0 +1,7 @@
+name,specialty,license,address,phone,npi,state,:ID,:LABEL
+Dr. Rachel Kim,Emergency Medicine,MD-OH-55192,"400 Medical Center Dr, Columbus, OH",614-555-0301,1234567890,OH,DOC-001,Doctor
+Dr. James Okafor,Orthopedics,MD-IL-38201,"230 E Erie St, Chicago, IL",312-555-0322,2345678901,IL,DOC-002,Doctor
+Dr. Linda Vasquez,Neurology,MD-IN-49012,"1801 N Senate Blvd, Indianapolis, IN",317-555-0345,3456789012,IN,DOC-003,Doctor
+Dr. Anthony Nguyen,Emergency Medicine,MD-OH-72341,"9000 Euclid Ave, Cleveland, OH",216-555-0367,4567890123,OH,DOC-004,Doctor
+Dr. Sandra Campbell,Physical Therapy,MD-IL-51023,"750 N Michigan Ave, Chicago, IL",312-555-0388,5678901234,IL,DOC-005,Doctor
+Dr. Robert Fitzpatrick,Orthopedics,MD-IN-63201,"3600 Priority Way S, Indianapolis, IN",317-555-0401,6789012345,IN,DOC-006,Doctor
