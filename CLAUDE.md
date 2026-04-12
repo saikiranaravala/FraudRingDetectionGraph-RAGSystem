@@ -4,7 +4,7 @@
 
 Production-grade **auto insurance fraud ring detection** system combining a Neo4j knowledge graph, Graph Neural Networks (GraphSAGE + HINormer), GraphRAG (LangGraph + Claude), and a Human-in-the-Loop (HITL) investigator workflow.
 
-**Current phase:** Phase 1 complete — full graph loaded into Neo4j Aura.
+**Current phase:** Phase 3 complete — GraphRAG + LangGraph agentic pipeline with Claude-powered reasoning, NL query engine, and investigator feedback loop.
 
 Full product spec: [PRD.md](PRD.md)
 
@@ -205,9 +205,107 @@ manual_override_flag = True if any([
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **Phase 1** (Months 1–3) | Neo4j graph + rule engine + HITL queue | Graph loaded ✅ |
-| **Phase 2** (Months 4–6) | GNN scoring (GraphSAGE + HINormer) | Not started |
+| **Phase 2** (Months 4–6) | GNN scoring (GraphSAGE + HINormer) | Implemented ✅ |
 | **Phase 3** (Months 7–9) | GraphRAG + LangGraph agentic pipeline | Not started |
 | **Phase 4** (Months 10–12) | Real-time streaming + cross-carrier exchange | Not started |
+
+## Phase 2 — GNN Scoring
+
+### Files
+
+| File | Purpose |
+| ------ | --------- |
+| [requirements_phase2.txt](requirements_phase2.txt) | PyTorch, PyG, imbalanced-learn, XGBoost, LightGBM |
+| [phase2_gnn/config.py](phase2_gnn/config.py) | Node types, feature column defs, edge types, hyperparameters |
+| [phase2_gnn/feature_utils.py](phase2_gnn/feature_utils.py) | Numeric/binary/ordinal feature extraction from CSVs |
+| [phase2_gnn/data_loader.py](phase2_gnn/data_loader.py) | CSVs → PyG HeteroData + stratified train/val/test splits |
+| [phase2_gnn/model.py](phase2_gnn/model.py) | FraudGNN: input projections + SAGEConv + HGTConv + classifier |
+| [phase2_gnn/train.py](phase2_gnn/train.py) | Training loop, SMOTE/ADASYN, XGBoost+RF+LightGBM ensemble |
+| [phase2_gnn/explainer.py](phase2_gnn/explainer.py) | Gradient saliency → reasoning trace strings per claim |
+| [phase2_gnn/scorer.py](phase2_gnn/scorer.py) | Batch inference + write `gnn_suspicion_score` back to Neo4j |
+| [run_phase2.py](run_phase2.py) | CLI: `train` \| `score` \| `explain` \| `evaluate` |
+
+### Install
+
+```bash
+# 1. PyTorch (CPU build — replace with GPU variant if needed)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# 2. PyTorch Geometric
+pip install torch-geometric
+pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+
+# 3. Everything else
+pip install -r requirements_phase2.txt
+```
+
+### Run
+
+```bash
+# Train (saves to models/)
+python run_phase2.py train
+
+# Score all claims + write to Neo4j
+python run_phase2.py score
+
+# Dry-run (no DB writes)
+python run_phase2.py score --dry-run
+
+# Explain top 20 flagged claims
+python run_phase2.py explain --top-n 20 --output traces.json
+
+# Re-evaluate saved model
+python run_phase2.py evaluate
+```
+
+### Model architecture
+
+```
+Input features (per node type, exact CSV columns)
+    │
+    ▼  type-specific Linear → hidden_channels (128)
+    │
+    ▼  SAGEConv (inductive — handles new nodes at inference)
+       HeteroConv wrapper: one SAGEConv per edge type
+    │
+    ▼  BatchNorm + ReLU + Dropout
+    │
+    ▼  HGTConv (HINormer-equivalent: heterogeneous transformer attention)
+       Type-specific attention weights per (src_type, edge_type, dst_type)
+    │
+    ▼  BatchNorm + ReLU + Dropout
+    │
+    ▼  Classification head: Linear(128→64) → ReLU → Linear(64→1) → sigmoid
+       Applied to Claim node embeddings only
+```
+
+### Class imbalance strategy
+
+| Stage | Technique | When |
+| ------- | ----------- | ------ |
+| GNN training | BCEWithLogitsLoss pos_weight = #neg/#pos | Training only |
+| Embedding augmentation | SMOTE + ADASYN on Claim embeddings | Training only ⚠️ |
+| Ensemble | XGBoost + RandomForest + LightGBM on augmented embeddings | Training + inference |
+
+**Critical rule:** `apply_smote_adasyn()` is called on training embeddings ONLY. Never on val/test/production data.
+
+### Neo4j properties written by scorer
+
+| Property | Node | Description |
+| ---------- | ------ | ------------- |
+| `gnn_suspicion_score` | Claim | Raw GNN sigmoid probability |
+| `ensemble_suspicion_score` | Claim | Mean of XGB+RF+LGBM probabilities |
+| `final_suspicion_score` | Claim | Blended score (0.5×GNN + 0.5×ensemble) |
+| `adjuster_priority_tier` | Claim | Critical / High Priority / Standard |
+| `ai_fraud_score` | InvestigationCase | final_suspicion_score of linked claim |
+
+### Score tiers
+
+| Score | Tier | Action |
+| ------- | ------ | -------- |
+| ≥ 0.90 | Critical | Mandatory Override (OVR-001) — payment HOLD |
+| ≥ 0.70 | High Priority | Priority queue — 4hr SLA |
+| < 0.70 | Standard | Standard queue — 30min SLA |
 
 ---
 
@@ -243,3 +341,144 @@ All CSVs use Neo4j bulk import format: `:ID`, `:LABEL`, `:START_ID`, `:END_ID`, 
 - **PII never stored raw** — only hashed representations (SSN, bank account, phone, VIN)
 - **Immutable audit log** — every AI output, investigator decision, and feedback signal logged with timestamp + user ID
 - **Quarterly bias audits** — model output distributions reviewed by compliance officer before each version promotion
+
+---
+
+## Phase 3 — GraphRAG + LangGraph Pipeline
+
+**Status:** ✅ Complete
+
+### Phase 3 Files
+
+| File | Purpose |
+| ---- | ------- |
+| [requirements_phase3.txt](requirements_phase3.txt) | Phase 3 Python dependencies |
+| [run_phase3.py](run_phase3.py) | CLI entry point (index / explain / query / feedback / retrain / stats) |
+| [phase3_rag/config.py](phase3_rag/config.py) | API keys, prompts, embedding config |
+| [phase3_rag/embedder.py](phase3_rag/embedder.py) | Sentence-transformer embeddings for rings/claims/subgraphs |
+| [phase3_rag/vector_store.py](phase3_rag/vector_store.py) | LocalVectorStore (numpy .npz) + PineconeVectorStore |
+| [phase3_rag/graph_retriever.py](phase3_rag/graph_retriever.py) | Neo4j subgraph retrieval + HumanReview write-back |
+| [phase3_rag/pipeline.py](phase3_rag/pipeline.py) | LangGraph StateGraph: retrieve → embed → reason |
+| [phase3_rag/nl_query.py](phase3_rag/nl_query.py) | NL → Cypher → results → NL summary (via Claude) |
+| [phase3_rag/feedback.py](phase3_rag/feedback.py) | Investigator feedback collection + retraining trigger |
+
+### Install Phase 3
+
+```bash
+pip install -r requirements_phase3.txt
+```
+
+Additional environment variables (`.env`):
+
+```
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=anthropic/claude-sonnet-4-5   # optional, default shown
+VECTOR_STORE_BACKEND=local                      # or "pinecone"
+PINECONE_API_KEY=...                            # only if using pinecone backend
+PINECONE_INDEX=fraud-rings                      # only if using pinecone backend
+```
+
+### Phase 3 Run Commands
+
+```bash
+# 1. Index all FraudRing nodes into the vector knowledge base (run once after Phase 1/2)
+python run_phase3.py index
+
+# 2. Run full GraphRAG pipeline for a claim
+python run_phase3.py explain CLM-521585
+python run_phase3.py explain CLM-521585 --verbose   # also prints raw subgraph
+
+# 3. Natural language graph queries
+python run_phase3.py query                                          # interactive REPL
+python run_phase3.py query --question "Which fraud rings have a lawyer in 3+ claims?"
+
+# 4. Record investigator decision (writes HumanReview node to Neo4j)
+python run_phase3.py feedback CLM-521585 --decision Approve   --investigator INV-001
+python run_phase3.py feedback CLM-521585 --decision Dismiss   --investigator INV-001 --feedback FP
+python run_phase3.py feedback CLM-521585 --decision Escalate  --investigator INV-001 --feedback FN
+
+# 5. Trigger feedback-loop retraining
+python run_phase3.py retrain
+python run_phase3.py retrain --evaluate-only   # compute F1 metrics without retraining
+python run_phase3.py retrain --min-reviews 10  # lower threshold for testing
+
+# 6. Print stats
+python run_phase3.py stats
+```
+
+### Phase 3 Pipeline Architecture
+
+```
+Investigator question
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  LangGraph StateGraph (pipeline.py)                             │
+│                                                                 │
+│  retrieve_subgraph          find_analogous_rings                │
+│  ─────────────────          ────────────────────                │
+│  Neo4j Cypher query    →    Embed subgraph text           →     │
+│  claim neighbours           cosine search vector KB             │
+│  (customer, lawyer,         (LocalVectorStore / Pinecone)       │
+│   shop, witnesses,          top-K=3 historical rings            │
+│   medical, ring,                                                │
+│   investigation_case)            generate_reasoning             │
+│                                  ─────────────────             │
+│                                  Claude (claude-sonnet-4-6)     │
+│                                  REASONING_SYSTEM_PROMPT        │
+│                                  + subgraph + analogous rings   │
+│                                  + OVR override triggers        │
+│                                  → Investigation Brief          │
+└─────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────┐   ┌──────────────────────────────────┐
+│  NL Query Engine        │   │  Feedback Loop                   │
+│  (nl_query.py)          │   │  (feedback.py)                   │
+│                         │   │                                  │
+│  NL → Cypher (Claude)   │   │  Investigator decisions          │
+│  safe execute (no write)│   │  → HumanReview nodes (Neo4j)     │
+│  results → NL (Claude)  │   │  → F1 delta measurement          │
+│  prompt caching         │   │  → Phase 2 run_training()        │
+└─────────────────────────┘   └──────────────────────────────────┘
+```
+
+### Vector Store Backends
+
+| Backend           | Config                                    | Use Case                     |
+| ----------------- | ----------------------------------------- | ---------------------------- |
+| `local` (default) | No extra config                           | Development / ≤ 100K rings   |
+| `pinecone`        | `PINECONE_API_KEY` + `PINECONE_INDEX`     | Production ANN search        |
+
+### Investigator Feedback → Label Mapping
+
+| Decision | Label | Meaning                 |
+| -------- | ----- | ----------------------- |
+| Approve  | 1     | Confirms fraud          |
+| Escalate | 1     | Confirmed serious fraud |
+| Dismiss  | 0     | False positive          |
+
+`feedback_to_model` signal: `Correct` / `FP` / `FN` / `Uncertain` (Uncertain excluded from retraining)
+
+### LLM Routing via OpenRouter
+
+All Claude calls go through [OpenRouter](https://openrouter.ai) using the OpenAI-compatible API (`openai` Python package, `base_url=https://openrouter.ai/api/v1`). Three call sites:
+
+- `pipeline.py` — REASONING_SYSTEM_PROMPT → investigation brief generation
+- `nl_query.py` — NL_QUERY_SYSTEM_PROMPT → Cypher generation
+- `nl_query.py` — RESULT_FORMATTER_SYSTEM_PROMPT → result summarisation
+
+Model is configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-sonnet-4-5`.
+
+### Cypher Safety
+
+The NL query engine enforces read-only access via regex block:
+
+```python
+FORBIDDEN_KEYWORDS = re.compile(
+    r"\b(MERGE|CREATE|DELETE|DETACH|SET|REMOVE|DROP|CALL\s+apoc\.periodic)\b",
+    re.IGNORECASE,
+)
+```
+
+Any generated Cypher containing write operations raises `ValueError` before execution.
