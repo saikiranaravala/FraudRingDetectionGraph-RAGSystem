@@ -1,0 +1,1307 @@
+[
+  {
+    "claim_id": "CLM-231508",
+    "fraud_score": 0.5273,
+    "top_features": [
+      [
+        "total_claim_amount",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ],
+      [
+        "reserves_set",
+        0.0
+      ],
+      [
+        "injury_claim",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.743769217910085e-07
+      ],
+      [
+        "RepairShop",
+        4.0000788459337855e-08
+      ],
+      [
+        "Customer",
+        1.3967565770656165e-08
+      ],
+      [
+        "Lawyer",
+        1.3105043272787498e-08
+      ],
+      [
+        "FraudRing",
+        1.3058367720475417e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-231508 \u2014 fraud score 0.527 (MEDIUM). Top driving features: total_claim_amount (importance=0.000), cross_role_participation_flag (importance=0.000), reserves_set (importance=0.000), injury_claim (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-648852",
+    "fraud_score": 0.5297,
+    "top_features": [
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "total_legal_rubric_score",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "claim_padding_flag",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "llm_judge_confidence",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.906276025920306e-07
+      ],
+      [
+        "RepairShop",
+        3.045019880687505e-08
+      ],
+      [
+        "Customer",
+        1.5403285757997764e-08
+      ],
+      [
+        "Lawyer",
+        8.117708283350566e-09
+      ],
+      [
+        "InvestigationCase",
+        9.411517121193924e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-648852 \u2014 fraud score 0.530 (MEDIUM). Top driving features: vehicle_claim (importance=0.000), total_legal_rubric_score (importance=0.000), witness_statement_count (importance=0.000), duplicate_claim_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-589094",
+    "fraud_score": 0.5324,
+    "top_features": [
+      [
+        "litigation_flag",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "reserves_set",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.7340067276782065e-07
+      ],
+      [
+        "RepairShop",
+        6.030668942003103e-08
+      ],
+      [
+        "Customer",
+        3.295100015066055e-08
+      ],
+      [
+        "Lawyer",
+        1.3688535638323174e-08
+      ],
+      [
+        "FraudRing",
+        2.2248423103832238e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-589094 \u2014 fraud score 0.532 (MEDIUM). Top driving features: litigation_flag (importance=0.000), rag_confidence_score (importance=0.000), manual_override_flag (importance=0.000), staged_accident_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-873384",
+    "fraud_score": 0.5365,
+    "top_features": [
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "reserves_set",
+        0.0
+      ],
+      [
+        "total_claim_amount",
+        0.0
+      ],
+      [
+        "role_switching_flag",
+        0.0
+      ],
+      [
+        "ring_member_flag",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.740463773103329e-07
+      ],
+      [
+        "RepairShop",
+        2.590423697768074e-08
+      ],
+      [
+        "Customer",
+        9.075455942308963e-09
+      ],
+      [
+        "Lawyer",
+        6.750614289785517e-09
+      ],
+      [
+        "InvestigationCase",
+        8.805894902153e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-873384 \u2014 fraud score 0.537 (MEDIUM). Top driving features: vehicle_claim (importance=0.000), witness_statement_count (importance=0.000), reserves_set (importance=0.000), total_claim_amount (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-149367",
+    "fraud_score": 0.5403,
+    "top_features": [
+      [
+        "geo_longitude",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "number_of_vehicles_involved",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "llm_judge_confidence",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.3503493196130876e-07
+      ],
+      [
+        "RepairShop",
+        6.387791273709809e-08
+      ],
+      [
+        "Customer",
+        2.0008375400948353e-08
+      ],
+      [
+        "Lawyer",
+        1.6409295255925826e-08
+      ],
+      [
+        "InvestigationCase",
+        1.953238237817345e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-149367 \u2014 fraud score 0.540 (MEDIUM). Top driving features: geo_longitude (importance=0.000), rag_confidence_score (importance=0.000), salvage_value (importance=0.000), number_of_vehicles_involved (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-996253",
+    "fraud_score": 0.5447,
+    "top_features": [
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "litigation_flag",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "adjuster_priority_tier",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        3.0762345204493613e-07
+      ],
+      [
+        "RepairShop",
+        9.135074918731334e-08
+      ],
+      [
+        "Customer",
+        3.742015763918971e-08
+      ],
+      [
+        "Lawyer",
+        2.3655529091115568e-08
+      ],
+      [
+        "FraudRing",
+        2.342873450800198e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-996253 \u2014 fraud score 0.545 (MEDIUM). Top driving features: network_repeat_score (importance=0.000), vehicle_claim (importance=0.000), duplicate_claim_flag (importance=0.000), litigation_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-752504",
+    "fraud_score": 0.5495,
+    "top_features": [
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "litigation_flag",
+        0.0
+      ],
+      [
+        "total_claim_amount",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.3278475680399424e-07
+      ],
+      [
+        "RepairShop",
+        4.174137657741994e-08
+      ],
+      [
+        "Lawyer",
+        1.3601554549325101e-08
+      ],
+      [
+        "Customer",
+        1.3144560107036796e-08
+      ],
+      [
+        "FraudRing",
+        1.2915392089141164e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-752504 \u2014 fraud score 0.550 (MEDIUM). Top driving features: salvage_value (importance=0.000), vehicle_claim (importance=0.000), witness_statement_count (importance=0.000), cross_role_participation_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-520179",
+    "fraud_score": 0.5549,
+    "top_features": [
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "incident_severity",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ],
+      [
+        "total_legal_rubric_score",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "total_claim_amount",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.3357888778718916e-07
+      ],
+      [
+        "RepairShop",
+        4.828509503340683e-08
+      ],
+      [
+        "Lawyer",
+        1.2783312186570583e-08
+      ],
+      [
+        "Customer",
+        1.00197565799931e-08
+      ],
+      [
+        "FraudRing",
+        1.5692288579671754e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-520179 \u2014 fraud score 0.555 (MEDIUM). Top driving features: vehicle_claim (importance=0.000), staged_accident_flag (importance=0.000), incident_severity (importance=0.000), manual_override_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-235869",
+    "fraud_score": 0.5615,
+    "top_features": [
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "shared_entity_count",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "police_report_available",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.802076721764024e-07
+      ],
+      [
+        "RepairShop",
+        5.575566319748759e-08
+      ],
+      [
+        "Lawyer",
+        2.5749560705889962e-08
+      ],
+      [
+        "Customer",
+        1.1262714316728761e-08
+      ],
+      [
+        "InvestigationCase",
+        1.5783661044821429e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-235869 \u2014 fraud score 0.561 (MEDIUM). Top driving features: vehicle_claim (importance=0.000), network_repeat_score (importance=0.000), shared_entity_count (importance=0.000), duplicate_claim_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-931901",
+    "fraud_score": 0.5683,
+    "top_features": [
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "number_of_vehicles_involved",
+        0.0
+      ],
+      [
+        "evidence_quality_score",
+        0.0
+      ],
+      [
+        "total_claim_amount",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.3323443087974738e-07
+      ],
+      [
+        "RepairShop",
+        5.131580138595382e-08
+      ],
+      [
+        "Customer",
+        1.7256628126460782e-08
+      ],
+      [
+        "Lawyer",
+        1.532797888614823e-08
+      ],
+      [
+        "FraudRing",
+        1.3520506936259835e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-931901 \u2014 fraud score 0.568 (MEDIUM). Top driving features: staged_accident_flag (importance=0.000), subrogation_recovered (importance=0.000), network_repeat_score (importance=0.000), salvage_value (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-889883",
+    "fraud_score": 0.5749,
+    "top_features": [
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "police_report_available",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "role_switching_flag",
+        0.0
+      ],
+      [
+        "total_legal_rubric_score",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.0449759574603377e-07
+      ],
+      [
+        "RepairShop",
+        4.393660901769181e-08
+      ],
+      [
+        "Customer",
+        1.9960086916626096e-08
+      ],
+      [
+        "Lawyer",
+        1.6421257242882348e-08
+      ],
+      [
+        "FraudRing",
+        9.973520898043375e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-889883 \u2014 fraud score 0.575 (MEDIUM). Top driving features: subrogation_recovered (importance=0.000), vehicle_claim (importance=0.000), police_report_available (importance=0.000), cross_role_participation_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-216738",
+    "fraud_score": 0.5819,
+    "top_features": [
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "role_switching_flag",
+        0.0
+      ],
+      [
+        "geo_longitude",
+        0.0
+      ],
+      [
+        "injury_claim",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.57769989073131e-07
+      ],
+      [
+        "RepairShop",
+        4.4270947796576365e-08
+      ],
+      [
+        "Customer",
+        1.7943696306588208e-08
+      ],
+      [
+        "Lawyer",
+        8.428138187355216e-09
+      ],
+      [
+        "FraudRing",
+        8.823956010317602e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-216738 \u2014 fraud score 0.582 (MEDIUM). Top driving features: salvage_value (importance=0.000), liability_probability_score (importance=0.000), geo_latitude (importance=0.000), cross_role_participation_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-219028",
+    "fraud_score": 0.5904,
+    "top_features": [
+      [
+        "injury_claim",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "total_claim_amount",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "ring_member_flag",
+        0.0
+      ],
+      [
+        "shared_entity_count",
+        0.0
+      ],
+      [
+        "claim_velocity_score",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.5205494580404775e-07
+      ],
+      [
+        "RepairShop",
+        3.9199854029448034e-08
+      ],
+      [
+        "Lawyer",
+        1.1572014457783553e-08
+      ],
+      [
+        "Customer",
+        9.745655837889444e-09
+      ],
+      [
+        "InvestigationCase",
+        1.635916957454242e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-219028 \u2014 fraud score 0.590 (MEDIUM). Top driving features: injury_claim (importance=0.000), staged_accident_flag (importance=0.000), network_repeat_score (importance=0.000), total_claim_amount (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-349658",
+    "fraud_score": 0.5977,
+    "top_features": [
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "shared_entity_count",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "incident_hour_of_the_day",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        3.593183066641359e-07
+      ],
+      [
+        "RepairShop",
+        7.497366283359952e-08
+      ],
+      [
+        "Lawyer",
+        2.069031701523727e-08
+      ],
+      [
+        "Customer",
+        1.565111951151721e-08
+      ],
+      [
+        "FraudRing",
+        1.4278128679379165e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-349658 \u2014 fraud score 0.598 (MEDIUM). Top driving features: subrogation_recovered (importance=0.000), vehicle_claim (importance=0.000), geo_latitude (importance=0.000), staged_accident_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-283267",
+    "fraud_score": 0.6075,
+    "top_features": [
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "adjuster_priority_tier",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        4.0726169459048833e-07
+      ],
+      [
+        "RepairShop",
+        6.869719015867304e-08
+      ],
+      [
+        "Lawyer",
+        3.86899330351298e-08
+      ],
+      [
+        "Customer",
+        3.090958955453971e-08
+      ],
+      [
+        "InvestigationCase",
+        2.5872799458426243e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-283267 \u2014 fraud score 0.607 (MEDIUM). Top driving features: vehicle_claim (importance=0.000), witness_statement_count (importance=0.000), network_repeat_score (importance=0.000), staged_accident_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Lawyer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-571462",
+    "fraud_score": 0.6127,
+    "top_features": [
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "litigation_flag",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "adjuster_priority_tier",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        7.976217375471606e-08
+      ],
+      [
+        "RepairShop",
+        1.814103534059086e-08
+      ],
+      [
+        "Customer",
+        7.394104439839566e-09
+      ],
+      [
+        "Lawyer",
+        4.060398683947142e-09
+      ],
+      [
+        "InvestigationCase",
+        4.833501376921845e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "staged_accident_flag",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-571462 \u2014 fraud score 0.613 (MEDIUM). Top driving features: subrogation_recovered (importance=0.000), litigation_flag (importance=0.000), salvage_value (importance=0.000), adjuster_priority_tier (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); staged_accident_flag; OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-265026",
+    "fraud_score": 0.6261,
+    "top_features": [
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "witnesses",
+        0.0
+      ],
+      [
+        "network_repeat_score",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "reserves_set",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ],
+      [
+        "duplicate_claim_flag",
+        0.0
+      ],
+      [
+        "witness_statement_count",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.3827225586737768e-07
+      ],
+      [
+        "RepairShop",
+        2.5380739288038967e-08
+      ],
+      [
+        "Customer",
+        1.4712237650371662e-08
+      ],
+      [
+        "Lawyer",
+        8.203837609244147e-09
+      ],
+      [
+        "InvestigationCase",
+        7.718324868122295e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-265026 \u2014 fraud score 0.626 (MEDIUM). Top driving features: liability_probability_score (importance=0.000), witnesses (importance=0.000), network_repeat_score (importance=0.000), staged_accident_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-994538",
+    "fraud_score": 0.64,
+    "top_features": [
+      [
+        "days_open",
+        0.0
+      ],
+      [
+        "number_of_vehicles_involved",
+        0.0
+      ],
+      [
+        "arbitration_flag",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "days_to_report",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "claim_velocity_score",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        2.2359033380325855e-07
+      ],
+      [
+        "RepairShop",
+        4.3673605176763886e-08
+      ],
+      [
+        "Customer",
+        1.8836232129615382e-08
+      ],
+      [
+        "Lawyer",
+        1.2280419348087435e-08
+      ],
+      [
+        "InvestigationCase",
+        1.7278495301198404e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)",
+      "OVR-006-candidate (hospitalization, no police report)"
+    ],
+    "signal_summary": "Claim CLM-994538 \u2014 fraud score 0.640 (MEDIUM). Top driving features: days_open (importance=0.000), number_of_vehicles_involved (importance=0.000), arbitration_flag (importance=0.000), staged_accident_flag (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True); OVR-006-candidate (hospitalization, no police report)."
+  },
+  {
+    "claim_id": "CLM-999435",
+    "fraud_score": 0.6446,
+    "top_features": [
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "shared_entity_count",
+        0.0
+      ],
+      [
+        "rag_confidence_score",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "incident_hour_of_the_day",
+        0.0
+      ],
+      [
+        "subrogation_recovered",
+        0.0
+      ],
+      [
+        "witnesses",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        3.2505619174116873e-07
+      ],
+      [
+        "RepairShop",
+        7.583233241348353e-08
+      ],
+      [
+        "Customer",
+        2.7823791270975562e-08
+      ],
+      [
+        "Lawyer",
+        1.4599628173073143e-08
+      ],
+      [
+        "InvestigationCase",
+        2.2587709480603735e-09
+      ]
+    ],
+    "override_triggers": [
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-999435 \u2014 fraud score 0.645 (MEDIUM). Top driving features: staged_accident_flag (importance=0.000), shared_entity_count (importance=0.000), rag_confidence_score (importance=0.000), salvage_value (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-001-candidate (ring_member_flag=True)."
+  },
+  {
+    "claim_id": "CLM-254837",
+    "fraud_score": 0.6569,
+    "top_features": [
+      [
+        "witness_statement_count",
+        0.0
+      ],
+      [
+        "manual_override_flag",
+        0.0
+      ],
+      [
+        "staged_accident_flag",
+        0.0
+      ],
+      [
+        "salvage_value",
+        0.0
+      ],
+      [
+        "liability_probability_score",
+        0.0
+      ],
+      [
+        "geo_latitude",
+        0.0
+      ],
+      [
+        "vehicle_claim",
+        0.0
+      ],
+      [
+        "cross_role_participation_flag",
+        0.0
+      ]
+    ],
+    "top_neighbor_types": [
+      [
+        "NetworkFeature",
+        1.5248562590386427e-07
+      ],
+      [
+        "RepairShop",
+        3.556625927103596e-08
+      ],
+      [
+        "Customer",
+        1.324143017455981e-08
+      ],
+      [
+        "Lawyer",
+        9.747922469216519e-09
+      ],
+      [
+        "InvestigationCase",
+        8.358333469793422e-10
+      ]
+    ],
+    "override_triggers": [
+      "OVR-002 (total_claim_amount > $50K)",
+      "OVR-001-candidate (ring_member_flag=True)"
+    ],
+    "signal_summary": "Claim CLM-254837 \u2014 fraud score 0.657 (MEDIUM). Top driving features: witness_statement_count (importance=0.000), manual_override_flag (importance=0.000), staged_accident_flag (importance=0.000), salvage_value (importance=0.000). Strongest neighborhood influence from: NetworkFeature nodes (score=0.000), RepairShop nodes (score=0.000), Customer nodes (score=0.000).   Override triggers: OVR-002 (total_claim_amount > $50K); OVR-001-candidate (ring_member_flag=True)."
+  }
+]

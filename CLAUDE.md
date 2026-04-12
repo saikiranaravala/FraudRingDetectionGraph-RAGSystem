@@ -191,7 +191,7 @@ manual_override_flag = True if any([
 | Batch ETL | AWS Glue + EMR |
 | Agentic pipeline | LangGraph |
 | Vector KB | Pinecone or Weaviate |
-| LLM reasoning | Claude (Anthropic API) |
+| LLM reasoning | Claude via OpenRouter (openai-compatible API) |
 | Oversampling | SMOTE + ADASYN (training time only) |
 | Visualization | Neo4j Bloom + React dashboard |
 | ML serving | Amazon SageMaker |
@@ -204,9 +204,9 @@ manual_override_flag = True if any([
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **Phase 1** (Months 1–3) | Neo4j graph + rule engine + HITL queue | Graph loaded ✅ |
-| **Phase 2** (Months 4–6) | GNN scoring (GraphSAGE + HINormer) | Implemented ✅ |
-| **Phase 3** (Months 7–9) | GraphRAG + LangGraph agentic pipeline | Not started |
+| **Phase 1** (Months 1–3) | Neo4j graph + rule engine + HITL queue | Complete ✅ |
+| **Phase 2** (Months 4–6) | GNN scoring (GraphSAGE + HINormer) | Complete ✅ |
+| **Phase 3** (Months 7–9) | GraphRAG + LangGraph agentic pipeline | Complete ✅ |
 | **Phase 4** (Months 10–12) | Real-time streaming + cross-carrier exchange | Not started |
 
 ## Phase 2 — GNN Scoring
@@ -424,7 +424,8 @@ Investigator question
 │   medical, ring,                                                │
 │   investigation_case)            generate_reasoning             │
 │                                  ─────────────────             │
-│                                  Claude (claude-sonnet-4-6)     │
+│                                  Claude via OpenRouter           │
+│                                  (anthropic/claude-sonnet-4-5)  │
 │                                  REASONING_SYSTEM_PROMPT        │
 │                                  + subgraph + analogous rings   │
 │                                  + OVR override triggers        │
@@ -439,7 +440,7 @@ Investigator question
 │  NL → Cypher (Claude)   │   │  Investigator decisions          │
 │  safe execute (no write)│   │  → HumanReview nodes (Neo4j)     │
 │  results → NL (Claude)  │   │  → F1 delta measurement          │
-│  prompt caching         │   │  → Phase 2 run_training()        │
+│  via OpenRouter         │   │  → Phase 2 run_training()        │
 └─────────────────────────┘   └──────────────────────────────────┘
 ```
 
@@ -482,3 +483,12 @@ FORBIDDEN_KEYWORDS = re.compile(
 ```
 
 Any generated Cypher containing write operations raises `ValueError` before execution.
+
+### Known Fixes Applied
+
+| Issue | File | Fix |
+| ----- | ---- | --- |
+| `OPENROUTER_API_KEY` read as `None` despite being set in `.env` | [phase3_rag/config.py](phase3_rag/config.py) | Added `load_dotenv()` call at top of config before `os.getenv()` |
+| `FutureWarning: get_sentence_embedding_dimension` renamed in sentence-transformers ≥ 3.x | [phase3_rag/embedder.py](phase3_rag/embedder.py) | `getattr` probe for new `get_embedding_dimension()` name with fallback to old name |
+| `ReduceLROnPlateau` `verbose` kwarg removed in PyTorch ≥ 2.2 | [phase2_gnn/train.py](phase2_gnn/train.py) | Removed `verbose=False` from scheduler init |
+| LightGBM `UserWarning: X does not have valid feature names` at inference | [phase2_gnn/scorer.py](phase2_gnn/scorer.py), [train.py](phase2_gnn/train.py) | Cast to plain numpy + `warnings.catch_warnings()` filter |
