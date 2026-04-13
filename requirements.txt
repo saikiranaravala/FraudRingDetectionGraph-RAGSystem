@@ -1,4 +1,34 @@
-neo4j
-pandas
-tqdm
-python-dotenv
+# ── Web server ────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# ── LLM (OpenRouter — OpenAI-compatible) ─────────────────────────────
+openai>=1.30.0
+
+# ── Agentic pipeline ─────────────────────────────────────────────────
+langgraph>=0.2.28
+langchain-core>=0.3.0
+
+# ── Embeddings ────────────────────────────────────────────────────────
+# torch is installed via build.sh (CPU-only build) to avoid the 2 GB CUDA wheel
+sentence-transformers>=3.0.0
+
+# ── Vector store ──────────────────────────────────────────────────────
+scikit-learn>=1.4.0        # cosine_similarity (local backend fallback)
+numpy>=1.26.0
+pinecone-client>=3.0.0     # Pinecone ANN vector store
+
+# ── Graph DB ──────────────────────────────────────────────────────────
+neo4j>=5.18.0
+
+# ── Utilities ─────────────────────────────────────────────────────────
+pandas>=2.1.0
+tqdm>=4.66.0
+joblib>=1.3.0
+python-dotenv>=1.0.0
+
+# ── Phase 2 GNN (offline training only — not needed on Render) ────────
+# Run locally: pip install -r requirements_phase2.txt
+# torch-geometric, torch-scatter, torch-sparse, xgboost, lightgbm,
+# imbalanced-learn are NOT installed on Render.
+# trigger_retrain() lazy-imports phase2_gnn and will raise clearly if called.

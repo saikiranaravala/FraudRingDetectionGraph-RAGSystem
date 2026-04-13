@@ -33,11 +33,13 @@ MAX_TOKENS          = 2048
 ANTHROPIC_API_KEY   = OPENROUTER_API_KEY
 
 # ── Embeddings ────────────────────────────────────────────────────────
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # sentence-transformers, 384-dim
+# paraphrase-MiniLM-L3-v2: 17 MB weights, 384-dim output — fits Render free plan (512 MB)
+# all-MiniLM-L6-v2:        90 MB weights, 384-dim output — better quality, needs Standard plan
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "paraphrase-MiniLM-L3-v2")
 EMBEDDING_DIM   = 384
 
 # ── Vector store ──────────────────────────────────────────────────────
-VECTOR_STORE_BACKEND = os.getenv("VECTOR_STORE_BACKEND", "local")
+VECTOR_STORE_BACKEND = os.getenv("VECTOR_STORE_BACKEND", "pinecone")
 PINECONE_API_KEY     = os.getenv("PINECONE_API_KEY", "")
 PINECONE_INDEX       = os.getenv("PINECONE_INDEX", "fraud-rings")
 TOP_K_ANALOGOUS      = 3    # number of similar rings to retrieve

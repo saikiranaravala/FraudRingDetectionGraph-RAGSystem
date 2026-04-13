@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: fraud-ring-detection-api
+    runtime: python
+    buildCommand: bash build.sh
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+
+    envVars:
+      # ── Neo4j ───────────────────────────────────────────────────────
+      - key: NEO4J_URI
+        sync: false         # set in Render dashboard
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: NEO4J_TRUST_ALL_CERTS
+        value: "true"
+
+      # ── OpenRouter ──────────────────────────────────────────────────
+      - key: OPENROUTER_API_KEY
+        sync: false         # set in Render dashboard
+      - key: OPENROUTER_MODEL
+        value: anthropic/claude-sonnet-4-5
+
+      # ── Embeddings ──────────────────────────────────────────────────
+      # paraphrase-MiniLM-L3-v2 (17 MB) fits free plan RAM (512 MB)
+      # Switch to all-MiniLM-L6-v2 (90 MB) on Standard plan for better quality
+      - key: EMBEDDING_MODEL
+        value: paraphrase-MiniLM-L3-v2
+
+      # ── Pinecone vector store ────────────────────────────────────────
+      - key: VECTOR_STORE_BACKEND
+        value: pinecone
+      - key: PINECONE_API_KEY
+        sync: false         # set in Render dashboard
+      - key: PINECONE_INDEX
+        value: fraud-rings

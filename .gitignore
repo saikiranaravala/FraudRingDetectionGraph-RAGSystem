@@ -1,6 +1,19 @@
+# Credentials
 .env
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+venv/
+venv/*
+.venv/
+
+# Model artefacts (large binaries — deploy via Pinecone / model registry)
+#models/
+#traces.json
+
+# OS
 .DS_Store
-/venv/
+Thumbs.db
