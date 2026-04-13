@@ -64,7 +64,7 @@ def cmd_gnn_train(args: argparse.Namespace) -> None:
         import torch
         from src.services.gnn.train import run_training
     except ImportError as e:
-        print(f"\n  ❌  GNN dependencies not installed: {e}")
+        print(f"\n  [ERROR]  GNN dependencies not installed: {e}")
         print("  Run: pip install -r requirements_phase2.txt")
         sys.exit(1)
 
@@ -83,7 +83,7 @@ def cmd_gnn_score(args: argparse.Namespace) -> None:
         import torch
         from src.services.gnn.scorer import run_scoring
     except ImportError as e:
-        print(f"\n  ❌  GNN dependencies not installed: {e}")
+        print(f"\n  [ERROR]  GNN dependencies not installed: {e}")
         sys.exit(1)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,7 +98,7 @@ def cmd_gnn_explain(args: argparse.Namespace) -> None:
         from src.services.gnn.train import load_artefacts
         from src.services.gnn.data_loader import build_hetero_data
     except ImportError as e:
-        print(f"\n  ❌  GNN dependencies not installed: {e}")
+        print(f"\n  [ERROR]  GNN dependencies not installed: {e}")
         sys.exit(1)
 
     import json
@@ -122,7 +122,7 @@ def cmd_gnn_evaluate(args: argparse.Namespace) -> None:
         import torch
         from src.services.gnn.train import run_training
     except ImportError as e:
-        print(f"\n  ❌  GNN dependencies not installed: {e}")
+        print(f"\n  [ERROR]  GNN dependencies not installed: {e}")
         sys.exit(1)
 
     device = torch.device("cpu")
@@ -144,7 +144,7 @@ def cmd_rag_index(args: argparse.Namespace) -> None:
     retriever.close()
 
     if not rings:
-        print("  ❌  No FraudRing nodes found in Neo4j.")
+        print("  [ERROR]  No FraudRing nodes found in Neo4j.")
         sys.exit(1)
 
     print(f"  Found {len(rings)} fraud rings — embedding …")
@@ -165,7 +165,7 @@ def cmd_rag_index(args: argparse.Namespace) -> None:
         })
 
     vs.save()
-    print(f"\n  ✅  Indexed {len(vs)} rings into vector store.")
+    print(f"\n  [OK]  Indexed {len(vs)} rings into vector store.")
 
 
 def cmd_rag_explain(args: argparse.Namespace) -> None:
@@ -176,7 +176,7 @@ def cmd_rag_explain(args: argparse.Namespace) -> None:
     result = run_pipeline(claim_id)
 
     if result.get("error"):
-        print(f"  ❌  Pipeline error: {result['error']}")
+        print(f"  [ERROR]  Pipeline error: {result['error']}")
         sys.exit(1)
 
     fraud_score = result.get("fraud_score", 0.0)
@@ -190,7 +190,7 @@ def cmd_rag_explain(args: argparse.Namespace) -> None:
     if overrides:
         print(f"\n  Override triggers ({len(overrides)}):")
         for t in overrides:
-            print(f"    ⚠  {t}")
+            print(f"    [!]  {t}")
 
     if analogous:
         print(f"\n  Analogous rings (top {len(analogous)}):")
@@ -242,7 +242,7 @@ def cmd_rag_retrain(args: argparse.Namespace) -> None:
         print("\n  Computing F1 metrics (no retraining) …\n")
         metrics = store.compute_f1_delta()
         if "error" in metrics:
-            print(f"  ❌  {metrics['error']}")
+            print(f"  [ERROR]  {metrics['error']}")
             sys.exit(1)
         for k, v in metrics.items():
             if k != "report":
@@ -376,7 +376,7 @@ def main() -> None:
         print("\n  Interrupted.")
         sys.exit(0)
     except EnvironmentError as e:
-        print(f"\n  ❌  Configuration error: {e}")
+        print(f"\n  [ERROR]  Configuration error: {e}")
         print("  Ensure NEO4J_URI, NEO4J_PASSWORD, OPENROUTER_API_KEY are set in .env")
         sys.exit(1)
     except Exception as e:

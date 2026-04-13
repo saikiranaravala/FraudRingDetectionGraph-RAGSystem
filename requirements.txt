@@ -16,7 +16,7 @@ sentence-transformers>=3.0.0
 # ── Vector store ──────────────────────────────────────────────────────
 scikit-learn>=1.4.0        # cosine_similarity (local backend fallback)
 numpy>=1.26.0
-pinecone-client>=3.0.0     # Pinecone ANN vector store
+pinecone>=5.0.0            # Pinecone ANN vector store (package renamed from pinecone-client)
 
 # ── Graph DB ──────────────────────────────────────────────────────────
 neo4j>=5.18.0

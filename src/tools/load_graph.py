@@ -35,31 +35,21 @@ try:
 except ImportError:
     pass  # .env values must come from the shell environment instead
 
-# ─── CLI args  (env vars are used as defaults so CLI always wins) ─
-parser = argparse.ArgumentParser(
-    description="Load Fraud Ring Detection graph into Neo4j Aura",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-)
-parser.add_argument("--uri",      default=os.getenv("NEO4J_URI"),      help="neo4j+s://xxxx.databases.neo4j.io  [env: NEO4J_URI]")
-parser.add_argument("--user",     default=os.getenv("NEO4J_USER", "neo4j"), help="Database username  [env: NEO4J_USER]")
-parser.add_argument("--password", default=os.getenv("NEO4J_PASSWORD"), help="Database password  [env: NEO4J_PASSWORD]")
-parser.add_argument("--data-dir", default=os.getenv("DATA_DIR", "./data"), help="Directory containing CSV files  [env: DATA_DIR]")
-parser.add_argument("--batch",    type=int, default=int(os.getenv("BATCH_SIZE", 200)), help="Rows per batch  [env: BATCH_SIZE]")
-parser.add_argument("--trust-all-certs", action="store_true",
-                    default=os.getenv("NEO4J_TRUST_ALL_CERTS", "true").lower() == "true",
-                    help="Skip TLS cert verification (needed for Aura on Windows)  [env: NEO4J_TRUST_ALL_CERTS]")
-parser.add_argument("--dry-run",  action="store_true", help="Validate files only, no DB writes")
-args = parser.parse_args()
-
-# ─── Validate required connection settings ────────────────────────
-if not args.dry_run:
-    missing = [name for name, val in [("--uri / NEO4J_URI", args.uri), ("--password / NEO4J_PASSWORD", args.password)] if not val]
-    if missing:
-        parser.error(f"Missing required config: {', '.join(missing)}\n"
-                     "  Set them in .env or pass as CLI flags.")
-
-DATA_DIR   = args.data_dir
-BATCH_SIZE = args.batch
+def _build_parser():
+    parser = argparse.ArgumentParser(
+        description="Load Fraud Ring Detection graph into Neo4j Aura",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("--uri",      default=os.getenv("NEO4J_URI"),      help="neo4j+s://xxxx.databases.neo4j.io  [env: NEO4J_URI]")
+    parser.add_argument("--user",     default=os.getenv("NEO4J_USER", "neo4j"), help="Database username  [env: NEO4J_USER]")
+    parser.add_argument("--password", default=os.getenv("NEO4J_PASSWORD"), help="Database password  [env: NEO4J_PASSWORD]")
+    parser.add_argument("--data-dir", default=os.getenv("DATA_DIR", "./data"), help="Directory containing CSV files  [env: DATA_DIR]")
+    parser.add_argument("--batch",    type=int, default=int(os.getenv("BATCH_SIZE", 200)), help="Rows per batch  [env: BATCH_SIZE]")
+    parser.add_argument("--trust-all-certs", action="store_true",
+                        default=os.getenv("NEO4J_TRUST_ALL_CERTS", "true").lower() == "true",
+                        help="Skip TLS cert verification (needed for Aura on Windows)  [env: NEO4J_TRUST_ALL_CERTS]")
+    parser.add_argument("--dry-run",  action="store_true", help="Validate files only, no DB writes")
+    return parser
 
 # ─── Connection ─────────────────────────────────────────────────
 # URI scheme controls SSL mode — trusted_certificates param is NOT allowed
@@ -77,11 +67,11 @@ def _resolve_uri(uri: str, trust_all: bool) -> str:
             return relaxed + uri[len(strict):]
     return uri  # already ssc or plain bolt/neo4j — leave as-is
 
-def get_driver():
+def get_driver(args):
     uri = _resolve_uri(args.uri, args.trust_all_certs)
     driver = GraphDatabase.driver(uri, auth=(args.user, args.password))
     driver.verify_connectivity()
-    print(f"\n✅ Connected to Neo4j Aura: {uri}\n")
+    print(f"\n[OK] Connected to Neo4j Aura: {uri}\n")
     return driver
 
 # ─── Helpers ─────────────────────────────────────────────────────
@@ -102,9 +92,9 @@ def chunked(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i+n]
 
-def run_batches(session, query, rows, desc):
+def run_batches(session, query, rows, desc, batch_size=200):
     total = 0
-    for batch in tqdm(list(chunked(rows, BATCH_SIZE)), desc=desc, unit="batch"):
+    for batch in tqdm(list(chunked(rows, batch_size)), desc=desc, unit="batch"):
         session.run(query, rows=batch)
         total += len(batch)
     return total
@@ -162,12 +152,12 @@ def create_schema(session):
         try:
             session.run(f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{prop} IS UNIQUE")
         except Exception as e:
-            print(f"  ⚠️  Constraint {label}.{prop}: {e}")
+            print(f"  [!]  Constraint {label}.{prop}: {e}")
     for label, prop in INDEXES:
         try:
             session.run(f"CREATE INDEX IF NOT EXISTS FOR (n:{label}) ON (n.{prop})")
         except Exception as e:
-            print(f"  ⚠️  Index {label}.{prop}: {e}")
+            print(f"  [!]  Index {label}.{prop}: {e}")
     print("  Schema ready.\n")
 
 # ─── NODE LOADERS ────────────────────────────────────────────────
@@ -199,7 +189,7 @@ NODE_FILES = [
     ("nodes_Event.csv",              "Event",              ":ID"),
 ]
 
-def load_nodes(session, label, filepath, id_col):
+def load_nodes(session, label, filepath, id_col, batch_size=200):
     df = pd.read_csv(filepath, low_memory=False)
     exclude = [":ID", ":LABEL"]
     rows = []
@@ -213,7 +203,7 @@ def load_nodes(session, label, filepath, id_col):
     MERGE (n:{label} {{_neo4j_id: row._neo4j_id}})
     SET n += row
     """
-    return run_batches(session, query, rows, f"  {label}")
+    return run_batches(session, query, rows, f"  {label}", batch_size=batch_size)
 
 # ─── EDGE LOADERS ────────────────────────────────────────────────
 # Each entry: (filename, start_label, end_label, rel_type, start_id_prop, end_id_prop)
@@ -244,7 +234,7 @@ EDGE_FILES = [
     ("edges_EVENT_TO_ENTITIES.csv",           "Event",            None,               None),   # polymorphic
 ]
 
-def load_edges_fixed_type(session, filepath, start_label, end_label, rel_type):
+def load_edges_fixed_type(session, filepath, start_label, end_label, rel_type, batch_size=200):
     """Load edges where rel_type is fixed and both sides are known labels."""
     df = pd.read_csv(filepath, low_memory=False)
     rows = []
@@ -262,9 +252,9 @@ def load_edges_fixed_type(session, filepath, start_label, end_label, rel_type):
     MERGE (a)-[r:{rel_type}]->(b)
     SET r += row.props
     """
-    return run_batches(session, query, rows, f"  {rel_type}")
+    return run_batches(session, query, rows, f"  {rel_type}", batch_size=batch_size)
 
-def load_edges_typed_column(session, filepath, start_label, end_label=None):
+def load_edges_typed_column(session, filepath, start_label, end_label=None, batch_size=200):
     """Load edges where :TYPE is in a column (CUSTOMER_RELATIONSHIPS, shared attrs)."""
     df = pd.read_csv(filepath, low_memory=False)
     # Group by relationship type
@@ -293,9 +283,9 @@ def load_edges_typed_column(session, filepath, start_label, end_label=None):
             MERGE (a)-[r:{rel_type}]->(b)
             SET r += row.props
             """
-        run_batches(session, query, rows, f"  {rel_type}")
+        run_batches(session, query, rows, f"  {rel_type}", batch_size=batch_size)
 
-def load_edges_polymorphic(session, filepath, start_label):
+def load_edges_polymorphic(session, filepath, start_label, batch_size=200):
     """Load edges where end node can be any label (NetworkFeature, Event)."""
     df = pd.read_csv(filepath, low_memory=False)
     # Group by rel type
@@ -320,34 +310,50 @@ def load_edges_polymorphic(session, filepath, start_label):
         MERGE (a)-[r:{rel_type}]->(b)
         SET r += row.props
         """
-        run_batches(session, query, batch_rows, f"  {rel_type}")
+        run_batches(session, query, batch_rows, f"  {rel_type}", batch_size=batch_size)
 
 # ─── MAIN ─────────────────────────────────────────────────────────
 def main():
+    parser = _build_parser()
+    args = parser.parse_args()
+
+    # ─── Validate required connection settings ────────────────────
+    if not args.dry_run:
+        missing = [name for name, val in [
+            ("--uri / NEO4J_URI",           args.uri),
+            ("--password / NEO4J_PASSWORD", args.password),
+        ] if not val]
+        if missing:
+            parser.error(f"Missing required config: {', '.join(missing)}\n"
+                         "  Set them in .env or pass as CLI flags.")
+
+    data_dir   = args.data_dir
+    batch_size = args.batch
+
     if args.dry_run:
-        print("\n🔍 DRY RUN — validating files only (no DB writes)\n")
+        print("\nDRY RUN -- validating files only (no DB writes)\n")
         total_n = total_e = 0
         for fname, label, _ in NODE_FILES:
-            path = os.path.join(DATA_DIR, fname)
+            path = os.path.join(data_dir, fname)
             if os.path.exists(path):
                 df = pd.read_csv(path, low_memory=False)
                 total_n += len(df)
-                print(f"  ✅ {fname}: {len(df)} rows")
+                print(f"  [OK] {fname}: {len(df)} rows")
             else:
-                print(f"  ❌ MISSING: {fname}")
+                print(f"  [MISSING] MISSING: {fname}")
         for fname, *_ in EDGE_FILES:
-            path = os.path.join(DATA_DIR, fname)
+            path = os.path.join(data_dir, fname)
             if os.path.exists(path):
                 df = pd.read_csv(path, low_memory=False)
                 total_e += len(df)
-                print(f"  ✅ {fname}: {len(df)} rows")
+                print(f"  [OK] {fname}: {len(df)} rows")
             else:
-                print(f"  ❌ MISSING: {fname}")
+                print(f"  [MISSING] MISSING: {fname}")
         print(f"\nTotal nodes: {total_n:,}  (limit: 50,000)")
         print(f"Total edges:  {total_e:,}  (limit: 175,000)")
         return
 
-    driver = get_driver()
+    driver = get_driver(args)
 
     with driver.session() as session:
         # ── SCHEMA ──────────────────────────────────────────────
@@ -359,13 +365,13 @@ def main():
         print("=" * 55)
         total_nodes = 0
         for fname, label, id_col in NODE_FILES:
-            path = os.path.join(DATA_DIR, fname)
+            path = os.path.join(data_dir, fname)
             if not os.path.exists(path):
-                print(f"  ⚠️  Skipping missing file: {fname}")
+                print(f"  [!]  Skipping missing file: {fname}")
                 continue
-            n = load_nodes(session, label, path, id_col)
+            n = load_nodes(session, label, path, id_col, batch_size=batch_size)
             total_nodes += n
-        print(f"\n  ✅ Nodes loaded: {total_nodes:,}\n")
+        print(f"\n  [OK] Nodes loaded: {total_nodes:,}\n")
 
         # ── EDGES ───────────────────────────────────────────────
         print("=" * 55)
@@ -374,28 +380,28 @@ def main():
 
         for entry in EDGE_FILES:
             fname, start_label, end_label, rel_type = entry
-            path = os.path.join(DATA_DIR, fname)
+            path = os.path.join(data_dir, fname)
             if not os.path.exists(path):
-                print(f"  ⚠️  Skipping missing: {fname}")
+                print(f"  [!]  Skipping missing: {fname}")
                 continue
 
             print(f"\n  → {fname}")
 
             # Multi-type column edges (CUSTOMER_RELATIONSHIPS, shared)
             if rel_type is None and end_label == "Customer":
-                load_edges_typed_column(session, path, start_label, "Customer")
+                load_edges_typed_column(session, path, start_label, "Customer", batch_size=batch_size)
             # Polymorphic end node (NetworkFeature→anything, Event→anything)
             elif end_label is None:
-                load_edges_polymorphic(session, path, start_label)
+                load_edges_polymorphic(session, path, start_label, batch_size=batch_size)
             # Standard fixed-type edges
             else:
-                load_edges_fixed_type(session, path, start_label, end_label, rel_type)
+                load_edges_fixed_type(session, path, start_label, end_label, rel_type, batch_size=batch_size)
 
-        print("\n  ✅ Relationships loaded\n")
+        print("\n  [OK] Relationships loaded\n")
 
     driver.close()
     print("=" * 55)
-    print("🎉 GRAPH LOAD COMPLETE")
+    print(" GRAPH LOAD COMPLETE")
     print("=" * 55)
     print("\nNext: Open Neo4j Aura console → Query tab and run:")
     print("  MATCH (n) RETURN labels(n), count(n) ORDER BY count(n) DESC")
