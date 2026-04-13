@@ -1,5 +1,6 @@
 # Fraud Ring Detection: Graph-RAG System
-### PRD v2.0 — Auto Insurance · Production Architecture
+
+## PRD v3.0 — Auto Insurance · Production Architecture
 
 > **Confidential · Internal Use Only**
 
@@ -28,18 +29,18 @@ Insurance fraud costs the industry an estimated **$300 billion annually** — ro
 
 Most existing defenses remain **reactive and investigator-intuition dependent**.
 
-This PRD defines a best-in-class, production-grade **Fraud Ring Detection system** for auto insurance — one that combines Graph Neural Networks, GraphRAG, real-time streaming, and a rigorous Human-in-the-Loop framework to detect coordinated fraud rings **before claims are paid**.
+This PRD defines a best-in-class, production-grade **Fraud Ring Detection system** for auto insurance — one that combines Graph Neural Networks, GraphRAG, a Streamlit investigator UI, real-time streaming, and a rigorous Human-in-the-Loop framework to detect coordinated fraud rings **before claims are paid**.
 
 ### Key Numbers
 
 | Metric | Value |
-|--------|-------|
+| ------ | ----- |
 | Annual industry fraud loss | ~$300B (10% of all insurance spend) |
 | GNN recall gain vs. baseline | +19.7% (RL-GNN fusion) |
 | False positive reduction | 33% vs. baseline models |
 | Inference latency | 42ms per batch (near real-time) |
-| Target AUC-ROC at launch | ≥ 0.91 |
-| Target AUC-ROC at month 6 | ≥ 0.95 |
+| Target AUC-ROC at launch | >= 0.91 |
+| Target AUC-ROC at month 6 | >= 0.95 |
 
 ---
 
@@ -71,9 +72,9 @@ Traditional ML treats each claim in isolation. Increasingly sophisticated frauds
 ### Top Fraud Ring Signals
 
 | Signal | Severity | Detection Method |
-|--------|----------|-----------------|
+| ------ | -------- | ---------------- |
 | Shared phone / address across unrelated claimants | CRITICAL | Graph traversal — `SHARES_ATTRIBUTE` edges |
-| Same attorney + repair shop across ≥3 claims in 30 days | CRITICAL | Pattern query — closed-loop detection |
+| Same attorney + repair shop across >= 3 claims in 30 days | CRITICAL | Pattern query — closed-loop detection |
 | Shared bank account / payment routing hash | CRITICAL | `shared_bank_flag` + `SHARES_ATTRIBUTE` |
 | Professional witness (3+ claims, different incidents) | HIGH | `professional_witness_flag` + `same_name_claims_count` |
 | Geo-cluster incidents within defined radius | HIGH | `geo_latitude/longitude` + `claim_cluster_id` |
@@ -85,32 +86,53 @@ Traditional ML treats each claim in isolation. Increasingly sophisticated frauds
 
 ## 4. System Architecture
 
-### 4.1 Data Ingestion Layer
+### 4.1 Deployment Topology
 
-**Batch pipeline**
+```text
+GitHub Repository
+    |
+    ├──► Render.com (free plan)
+    │        api.py — FastAPI backend
+    │        build.sh — CPU torch + requirements.txt
+    │        render.yaml — service definition
+    │        URL: https://your-service.onrender.com
+    │
+    └──► Streamlit Community Cloud (free)
+             ui/streamlit_app.py — investigator UI
+             ui/requirements.txt — streamlit, requests, pandas
+             URL: https://your-app.streamlit.app
+```
+
+### 4.2 Data Ingestion Layer
+
+#### Batch pipeline
+
 - Historical claims data, vendor registry, prior fraud ring indices, court records, attorney licensing databases
 - Spark-based ETL via **AWS Glue + EMR** → Neo4j via JDBC connector
 - Covers 3+ years of historical data for model training
 
-**Real-time streaming**
+#### Real-time streaming (Phase 4)
+
 - Live FNOL events, claim submissions, repair shop invoices
 - **Amazon Kinesis → Neo4j Kafka Connector**
 - Graph updated within seconds — enables pre-payment intervention
 
-**External enrichment**
+#### External enrichment
+
 - Cross-carrier consortium feeds
 - Geospatial incident data
 - DMV records, attorney bar association APIs
 - Every node enriched at ingestion time
 
-**Identity resolution**
+#### Identity resolution
+
 - Hashed phone numbers, address normalization, VIN fingerprinting
 - IP clustering, bank account hashing
 - Durable entity identifiers that survive data entry variation
 
 ---
 
-### 4.2 Detection Engine — Three-Layer Model
+### 4.3 Detection Engine — Three-Layer Model
 
 #### Layer 1 — Rule & Heuristic Signals
 
@@ -119,7 +141,8 @@ Traditional ML treats each claim in isolation. Increasingly sophisticated frauds
 Triggered immediately on claim ingestion. Deterministic rules run on every claim entering the graph.
 
 **Flags triggered by:**
-- Same attorney + shop appearing across ≥3 claims in 30 days
+
+- Same attorney + shop appearing across >= 3 claims in 30 days
 - Duplicate phone/address across unrelated claimants
 - Incident geo-cluster within defined radius
 - Repair estimate outlier vs. vehicle damage photos
@@ -133,20 +156,24 @@ Outputs a **signal score** per entity that feeds as input features into Layer 2.
 > **Speed:** 42ms per batch · Scalable to 500K+ transactions
 
 **Primary architecture: GraphSAGE** (Graph Sample and Aggregate)
+
 - Inductive learning — handles new nodes without full retraining
 - Scales well to production graph sizes
 
 **Augmented with: HINormer** (Heterogeneous Information Network Transformer)
+
 - Handles heterogeneous node types natively
 - Achieved highest F-scores on small and large-scale claims datasets
 
 **How it works:**
+
 1. GNN computes a **suspicion embedding** for every entity
 2. Scores propagate through the network via connected edges
 3. A single new fraudulent claim elevates scores for all connected entities
 4. Ring detection emerges via score diffusion across the graph
 
 **Class imbalance handling:**
+
 - SMOTE + ADASYN applied at **training time only** (never inference)
 - VAE/GAN synthetic minority generation for rare ring pattern types
 - Hybrid ensemble: XGBoost + Random Forest + LightGBM
@@ -158,42 +185,58 @@ Outputs a **signal score** per entity that feeds as input features into Layer 2.
 > **Triggered:** On HITL flag · LLM-powered explanation & retrieval
 
 When a ring is flagged for human review, the **LangGraph agentic pipeline**:
+
 1. Retrieves the subgraph of connected entities from Neo4j
-2. Fetches analogous historical ring cases from the vector knowledge base (Pinecone/Weaviate)
-3. Generates a **natural-language reasoning trace** via Claude
+2. Fetches analogous historical ring cases from Pinecone (384-dim cosine search)
+3. Generates a **natural-language reasoning trace** via Claude (OpenRouter)
 
 **Example reasoning trace output:**
 > *"This ring shares structural patterns with Ring #FR-2023-0047, in which the same law firm appeared across claims in non-contiguous jurisdictions. Three witnesses appear in both rings. Repair estimates at SHOP-004 are 34% above baseline for this incident type."*
 
-Rather than a binary fraud/no-fraud label, the system produces **citable, structured natural language** the investigator can interrogate — asking follow-up questions directly against the live graph.
+Rather than a binary fraud/no-fraud label, the system produces **citable, structured natural language** the investigator can interrogate — asking follow-up questions directly against the live graph via the Streamlit UI.
 
-**Explainability:** GNNExplainer / PGExplainer attached to every GNN prediction — identifies the critical subgraph edges driving each score. Output populates the Reasoning Trace panel in the investigator dashboard.
+**Explainability:** Gradient saliency (d_fraud_score / d_features) attached to every GNN prediction — identifies the critical subgraph edges driving each score.
 
 ---
 
-### 4.3 Imbalanced Data Strategy
+### 4.4 Investigator UI — Streamlit Frontend
+
+A four-tab web application deployed to Streamlit Community Cloud:
+
+| Tab | Purpose |
+| --- | ------- |
+| **Investigate Claim** | Enter claim ID → fraud score banner + override triggers + analogous rings + Claude brief |
+| **Graph Query** | Natural language question → Cypher → Neo4j → NL answer |
+| **Record Feedback** | Submit Approve / Dismiss / Escalate with confidence score and override reason |
+| **Stats & History** | Total reviews, vector store entries, F1 retraining history |
+
+The UI calls the Render.com FastAPI backend over HTTPS. No ML or DB code runs in the frontend — it is purely a thin HTTP client.
+
+---
+
+### 4.5 Imbalanced Data Strategy
 
 Fraud cases are rare relative to legitimate claims. Strategy:
 
 | Approach | Tool | When Applied |
-|----------|------|-------------|
+| -------- | ---- | ------------ |
 | Oversampling | SMOTE + ADASYN | Training time only |
 | Synthetic generation | VAE / GAN / Diffusion Models | Training time only |
 | Ensemble classification | XGBoost + Random Forest + LightGBM | Inference |
 | Threshold tuning | Per-class calibration | Post-training |
 
-> ⚠️ Synthetic minority oversampling must **never** be applied at inference time.
+> **Warning:** Synthetic minority oversampling must **never** be applied at inference time.
 
 ---
 
 ## 5. Graph Data Model
 
-**Total scale: 14,292 nodes · 28,690 edges · 941 properties · 24 node types · 28 edge types**
+Scale: 14,292 nodes · 28,690 edges · 941 properties · 24 node types · 28 edge types
 
 ### 5.1 Node Reference
 
 | Node Type | Count | Properties | Key Fraud Signals |
-|-----------|-------|------------|------------------|
+| --------- | ----- | ---------- | ----------------- |
 | `Customer` | 1,000 | 109 | `ssn_hash`, `device_id`, `ip_address_last_login`, `bank_account_hash`, `shared_phone_flag`, `shared_bank_flag`, `synthetic_identity_flag`, `role_switching_flag`, `ip_flagged`, `fraud_history_count` |
 | `Claim` | 1,000 | 111 | `geo_latitude`, `geo_longitude`, `claim_cluster_id`, `ring_member_flag`, `staged_accident_flag`, `claim_padding_flag`, `closed_loop_flag`, `rag_confidence_score`, `llm_judge_verdict`, `manual_override_flag`, `manual_override_reasons` |
 | `FraudRing` | 20 | 30 | `ring_score`, `status` (Confirmed/Suspected/Under Watch), `member_count`, `total_claim_amount`, `detection_method`, `closed_loop_detected`, `law_enforcement_notified`, `nicb_case_filed` |
@@ -222,7 +265,7 @@ Fraud cases are rare relative to legitimate claims. Strategy:
 ### 5.2 Key Edge Types
 
 | Edge Type | Count | Key Properties |
-|-----------|-------|----------------|
+| --------- | ----- | -------------- |
 | `CUSTOMER_RELATIONSHIPS` | 7,974 | `relationship_type`, `confidence_score`, `weight`, `first_seen_date`, `last_seen_date`, `interaction_count` |
 | `SHARES_ATTRIBUTE` | 417 | `attribute_type`, `attribute_risk_score`, `fraud_signal`, `global_frequency`, `connection_strength` |
 | `RING_CONTAINS_CLAIM` | 150 | `role_in_ring`, `weight`, `connection_strength`, `event_time` |
@@ -237,17 +280,17 @@ Fraud cases are rare relative to legitimate claims. Strategy:
 
 ### 5.3 Fraud Ring Detection Patterns (Stress-Tested)
 
-```
-✅ Witnesses in 3+ claims:        263 witnesses  (top: Jason Evans = 9 claims)
-✅ Shared bank account customers: 5+  (bank_account_hash match)
-✅ Ring member claims:            150  across 20 rings
-✅ Closed loop claims:            76
-✅ Manual override triggers:      776  claims
-✅ Fraud-ring family units:       50
-✅ FraudRing nodes confirmed:     20
-✅ Staged accident flags:         25  claims
-✅ Synthetic identity flags:      8   customers
-✅ Role-switching customers:      19
+```text
+Witnesses in 3+ claims:        263 witnesses  (top: Jason Evans = 9 claims)
+Shared bank account customers: 5+  (bank_account_hash match)
+Ring member claims:            150  across 20 rings
+Closed loop claims:            76
+Manual override triggers:      776  claims
+Fraud-ring family units:       50
+FraudRing nodes confirmed:     20
+Staged accident flags:         25  claims
+Synthetic identity flags:      8   customers
+Role-switching customers:      19
 ```
 
 ---
@@ -258,35 +301,36 @@ Fraud cases are rare relative to legitimate claims. Strategy:
 
 ### 6.1 HITL Decision Flow
 
-```
+```text
 FNOL Event
-    │
-    ▼
+    |
+    v
 Graph Updated (Kinesis → Neo4j, <1 sec)
-    │
-    ▼
+    |
+    v
 Layer 1: Rule Engine (<100ms)
-    │
-    ▼
+    |
+    v
 Layer 2: GNN Scoring (42ms/batch)
-    │
-    ▼
+    |
+    v
 Triage Tier Assigned
     ├── Standard       → Queue for review (<30 min SLA)
     ├── High Priority  → Priority queue (<4 hr SLA)
     └── Mandatory Override → Payment HOLD + Senior review
-    │
-    ▼
+    |
+    v
 Layer 3: GraphRAG Fires
     └── LangGraph: subgraph retrieval → analogous cases → reasoning trace
-    │
-    ▼
-Investigator Review Dashboard
-    ├── Approve     → Claim proceeds, feedback logged
-    ├── Dismiss     → Ring cleared, feedback logged
-    └── Escalate    → Legal / SIU / Law enforcement
-    │
-    ▼
+    |
+    v
+Streamlit Investigator UI
+    ├── Investigate Claim tab  → view score, override triggers, Claude brief
+    ├── Graph Query tab        → ask questions in plain English
+    ├── Record Feedback tab    → Approve / Dismiss / Escalate
+    └── Stats tab              → review queue metrics, F1 history
+    |
+    v
 Weekly Retraining Cycle (feedback → F1 delta measurement)
 ```
 
@@ -310,8 +354,8 @@ Weekly Retraining Cycle (feedback → F1 delta measurement)
 These conditions **halt all automated progression**. A named senior investigator must review and sign off before any investigative action, payment hold, or vendor contact proceeds.
 
 | Code | Trigger | Condition | Rationale |
-|------|---------|-----------|-----------|
-| OVR-001 | Score threshold | Ring suspicion score ≥ 90 | Highest scores carry greatest consequences — fraud exposure AND wrongful accusation risk |
+| ---- | ------- | --------- | --------- |
+| OVR-001 | Score threshold | Ring suspicion score >= 0.90 | Highest scores carry greatest consequences — fraud exposure AND wrongful accusation risk |
 | OVR-002 | Financial exposure | Projected ring exposure > $75K–$100K | Dollar thresholds are legally defensible and easy to audit |
 | OVR-003 | Cross-jurisdiction | Same attorney, witness, or shop across claims in different regulatory jurisdictions | Legal complexity demands senior review before any contact |
 | OVR-004 | Ring contradiction | Entity from a previously dismissed ring reappears in current ring | Contradiction must be resolved: improved signal vs. known false positive |
@@ -339,32 +383,33 @@ manual_override_flag = True if any([
 ## 8. Technology Stack
 
 | Layer | Tool | Rationale |
-|-------|------|-----------|
+| ----- | ---- | --------- |
 | **Graph DB** | Neo4j Aura (GDB + GDS) | Native graph storage, Cypher queries, built-in GDS algorithms (PageRank, community detection, shortest path) |
 | **GNN Framework** | PyTorch Geometric + GraphSAGE / HINormer | Best-in-class heterogeneous graph support. GraphSAGE: inductive learning (new nodes without retraining). HINormer: highest F-scores on insurance datasets |
-| **Explainability** | GNNExplainer / PGExplainer | Proven on insurance claims datasets. Identifies critical subgraph edges driving each score → investigator Reasoning Trace panel |
-| **Streaming Ingest** | Amazon Kinesis + Neo4j Kafka Connector | Sub-second claim-to-graph latency. Enables pre-payment interception |
+| **Explainability** | Gradient saliency (d_score / d_features) | Identifies critical subgraph features driving each score → investigator Reasoning Trace panel |
+| **Streaming Ingest** | Amazon Kinesis + Neo4j Kafka Connector | Sub-second claim-to-graph latency. Enables pre-payment interception (Phase 4) |
 | **Batch ETL** | AWS Glue + EMR | Scalable bulk historical load. 3+ years of claims enrichment, vendor registry joins, court record cross-references |
 | **Orchestration** | LangGraph | Multi-step agentic RAG pipeline: graph traversal → vector retrieval → LLM reasoning in a single auditable chain |
-| **Vector KB** | Pinecone or Weaviate | Fast similarity retrieval for analogous historical ring cases. Powers GraphRAG "similar ring" reasoning trace |
-| **LLM Reasoning** | Claude (Anthropic API) | Explanation generation, NL querying, reasoning trace authoring. Investigators ask the graph questions in plain language |
+| **Vector KB** | Pinecone | Fast cosine similarity retrieval for analogous historical ring cases. 384-dim index, free starter tier. Persists across Render deploys. |
+| **LLM Reasoning** | Claude via OpenRouter (openai-compatible API) | Explanation generation, NL querying, reasoning trace authoring. Investigators ask the graph questions in plain language via the Streamlit UI. |
 | **Oversampling** | SMOTE + ADASYN | Class imbalance correction at training time only. VAE/GAN synthetic minority generation for rare ring patterns |
-| **Visualization** | Neo4j Bloom + React dashboard | Investigator-facing graph explorer + custom HITL review queue and decision interface |
-| **ML Serving** | Amazon SageMaker | Model hosting, weekly retraining pipeline, A/B testing between model versions |
+| **Frontend** | Streamlit | 4-tab investigator UI: Investigate / Query / Feedback / Stats. Deployed on Streamlit Community Cloud (free). |
+| **Web API** | FastAPI + uvicorn | REST API wrapping the GraphRAG pipeline. Deployed on Render.com (free plan, 512 MB RAM). |
+| **ML Serving** | Amazon SageMaker | Model hosting, weekly retraining pipeline, A/B testing between model versions (Phase 4) |
 
 ---
 
 ## 9. Success Metrics
 
 | Metric | Launch Target | Month 6 Target | Why It Matters |
-|--------|--------------|----------------|----------------|
+| ------ | ------------- | -------------- | -------------- |
 | Human Agreement Rate | > 65% | > 80% | % of AI-flagged rings confirmed by investigators. Primary signal quality measure. |
 | False Positive Rate | < 35% | < 20% | % of flagged rings dismissed. High FPR burns investigator trust and bandwidth. |
 | Pre-payment Interception Rate | Baseline TBD | Maximize | Highest-value metric for loss ratio impact. % of confirmed rings caught before payment exits. |
 | Mean Time to Decision (Standard) | < 30 min | < 20 min | Investigator queue-entry to Approve/Dismiss SLA. |
 | Mean Time to Decision (Override) | < 4 hours | < 2 hours | Senior review SLA. Balances rigor with pre-payment speed. |
 | F1-Score Delta per Retraining | Positive | Consistent growth | Measures feedback loop effectiveness. Stagnating F1 signals feedback quality issue. |
-| Model AUC-ROC | ≥ 0.91 | ≥ 0.95 | Production benchmark. Literature: 0.961 AUC achieved in comparable GNN fraud tasks. |
+| Model AUC-ROC | >= 0.91 | >= 0.95 | Production benchmark. Literature: 0.961 AUC achieved in comparable GNN fraud tasks. |
 | Investigator Confidence Score | Baseline survey | Trend upward | Quarterly survey. Leading indicator of tool adoption and trust. |
 
 ---
@@ -389,9 +434,11 @@ As more carriers participate, the graph becomes exponentially more powerful. A r
 ## 11. Compliance & Ethics
 
 ### No Automated Adverse Action
+
 The system never triggers a coverage denial, claim rejection, or legal referral without human sign-off. All automated outputs are labeled **investigative leads**, not determinations.
 
 ### Bias Monitoring
+
 GNN models trained on historical fraud data may encode geographic or demographic biases present in past investigative patterns.
 
 - **Quarterly bias audits** on model outputs by zip code, claimant demographics, and attorney demographics
@@ -399,69 +446,64 @@ GNN models trained on historical fraud data may encode geographic or demographic
 - Audit results reviewed by compliance officer before each model version is promoted to production
 
 ### Data Minimization
+
 - Only data fields **necessary for fraud detection** are ingested into the graph
 - PII handling follows state insurance regulatory requirements and applicable data protection law
 - Raw PII (SSNs, full bank accounts) are **never stored** — only hashed representations
 
 ### Audit Trail
+
 Every AI output, investigator decision, override, and feedback signal is logged **immutably** with timestamp and user ID. This log is the chain of accountability for any regulatory inquiry.
 
 ### Right to Explanation
+
 If the system's outputs ever inform an adverse action, the investigator's **documented reasoning** — not the AI's score — is the record of decision for regulatory and legal purposes.
 
 ---
 
 ## 12. Phased Rollout
 
-### Phase 1 — Foundation (Months 1–3)
+### Phase 1 — Foundation (Complete)
 
 **Goal:** Operational graph database with rule-based detection and investigator workflow live.
 
-- [ ] Neo4j Aura provisioned and populated with 3-year historical claims
-- [ ] Identity resolution pipeline active (phone/address/VIN/IP hashing)
-- [ ] Rule-based signal layer (Layer 1) live on all new claim ingestion
-- [ ] Investigator review queue operational with basic triage
-- [ ] Mandatory Override criteria enforced from day one
-- [ ] Baseline metrics established (FPR, agreement rate, time-to-decision)
-- [ ] Immutable audit log operational
-
-**Exit criteria:** Investigators actively using the queue. Baseline metrics captured.
+- [x] Neo4j Aura provisioned and populated with historical claims (14,292 nodes · 28,690 edges)
+- [x] Identity resolution pipeline active (phone/address/VIN/IP hashing)
+- [x] Rule-based signal layer (Layer 1) live on all new claim ingestion
+- [x] Mandatory Override criteria enforced
+- [x] Immutable audit log operational
 
 ---
 
-### Phase 2 — GNN Layer (Months 4–6)
+### Phase 2 — GNN Layer (Complete)
 
 **Goal:** ML-driven suspicion scoring integrated into the investigator workflow.
 
-- [ ] GraphSAGE model trained on historical data with SMOTE/ADASYN balancing
-- [ ] HINormer layer added for heterogeneous node types
-- [ ] GNN scores integrated into review queue (suspicion score visible per ring)
-- [ ] GNNExplainer / PGExplainer reasoning traces live in dashboard
-- [ ] Amazon SageMaker serving pipeline active
-- [ ] First model A/B test: rule-only vs. GNN-augmented
-- [ ] FraudRing nodes auto-generated from cluster detection
-
-**Exit criteria:** Human Agreement Rate ≥ 65%. FPR < 35%.
+- [x] GraphSAGE model trained on historical data with SMOTE/ADASYN balancing
+- [x] HINormer layer added for heterogeneous node types
+- [x] Ensemble: XGBoost + Random Forest + LightGBM on GNN embeddings
+- [x] GNN scores written to Neo4j (`gnn_suspicion_score`, `final_suspicion_score`, `adjuster_priority_tier`)
+- [x] Gradient saliency explainer for reasoning traces
+- [x] Score tiers: Critical (>= 0.90) / High Priority (>= 0.70) / Standard (< 0.70)
 
 ---
 
-### Phase 3 — GraphRAG + Agentic Layer (Months 7–9)
+### Phase 3 — GraphRAG + Agentic Layer (Complete)
 
-**Goal:** Natural language querying and analogous ring retrieval live for investigators.
+**Goal:** Natural language querying, analogous ring retrieval, and feedback loop live.
 
-- [ ] LangGraph agentic pipeline operational
-- [ ] Pinecone / Weaviate vector knowledge base populated with historical ring cases
-- [ ] Natural language querying live (investigators ask questions in plain English)
-- [ ] Analogous ring retrieval integrated into reasoning trace panel
-- [ ] First feedback-loop retraining cycle completed
-- [ ] F1-score delta measured and reported
-- [ ] Investigator confidence survey baseline established
-
-**Exit criteria:** First retraining cycle shows positive F1 delta. NL querying adopted by >50% of investigators.
+- [x] LangGraph StateGraph pipeline: retrieve_subgraph → find_analogous_rings → generate_reasoning
+- [x] Pinecone vector knowledge base populated (384-dim, 20 FraudRing embeddings)
+- [x] Natural language querying live via NL → Cypher → Neo4j → NL summary
+- [x] Claude investigation briefs generated via OpenRouter (openai-compatible API)
+- [x] Feedback loop: Approve / Dismiss / Escalate → HumanReview node → retraining trigger
+- [x] FastAPI REST API deployed on Render.com (free plan)
+- [x] Streamlit investigator UI deployed on Streamlit Community Cloud (free)
+- [x] Unified CLI: `python src/main.py rag index | explain | query | feedback | retrain | stats`
 
 ---
 
-### Phase 4 — Network Effect (Months 10–12)
+### Phase 4 — Network Effect (Not Started)
 
 **Goal:** Real-time pre-payment interception and cross-carrier intelligence exchange.
 
@@ -471,9 +513,8 @@ If the system's outputs ever inform an adverse action, the investigator's **docu
 - [ ] RL-GNN model upgrade for adaptive ring detection
 - [ ] Full production validation and load testing
 - [ ] Consortium ring alert participation active
-- [ ] Investigator confidence score at target trend
 
-**Exit criteria:** Human Agreement Rate ≥ 80%. FPR < 20%. Pre-payment interception rate tracked and improving. Cross-carrier alerts flowing bidirectionally.
+**Exit criteria:** Human Agreement Rate >= 80%. FPR < 20%. Pre-payment interception rate tracked and improving. Cross-carrier alerts flowing bidirectionally.
 
 ---
 
@@ -481,7 +522,7 @@ If the system's outputs ever inform an adverse action, the investigator's **docu
 
 ### Node-Level Fraud Flags
 
-```
+```text
 Customer:
   synthetic_identity_flag      — fabricated identity across multiple policies
   role_switching_flag          — same person appears as driver/witness across claims
@@ -515,12 +556,12 @@ FinancialTransaction:
 
 ### Edge-Level Risk Scores
 
-```
+```text
 SHARES_ATTRIBUTE fraud_signal values:
-  CRITICAL  — shared bank account (attribute_risk_score ≥ 0.95)
-  HIGH      — shared IP address   (attribute_risk_score ≥ 0.80)
-  MEDIUM    — shared phone        (attribute_risk_score ≥ 0.60)
-  LOW       — shared zip code     (attribute_risk_score ≥ 0.30)
+  CRITICAL  — shared bank account (attribute_risk_score >= 0.95)
+  HIGH      — shared IP address   (attribute_risk_score >= 0.80)
+  MEDIUM    — shared phone        (attribute_risk_score >= 0.60)
+  LOW       — shared zip code     (attribute_risk_score >= 0.30)
 ```
 
 ---
@@ -528,6 +569,7 @@ SHARES_ATTRIBUTE fraud_signal values:
 ## Appendix B — Cypher Query Patterns
 
 ### Find all members of a fraud ring
+
 ```cypher
 MATCH (r:FraudRing {ring_id: 'RING-007'})
 MATCH (r)-[:RING_INVOLVES_CUSTOMER]->(c:Customer)
@@ -536,6 +578,7 @@ RETURN r, c, cl
 ```
 
 ### Detect closed-loop patterns (Customer → Lawyer → Claim → Shop → Customer)
+
 ```cypher
 MATCH p = (c:Customer)-[:FILED_CLAIM]->(cl:Claim)
   -[:REPRESENTED_BY]->(l:Lawyer)
@@ -547,6 +590,7 @@ RETURN p LIMIT 25
 ```
 
 ### Find witnesses appearing in 3+ claims
+
 ```cypher
 MATCH (w:Witness)<-[:HAS_WITNESS]-(cl:Claim)
 WITH w, count(cl) AS claim_count
@@ -556,6 +600,7 @@ ORDER BY claim_count DESC
 ```
 
 ### Shared bank account ring detection
+
 ```cypher
 MATCH (c1:Customer)-[e:SHARES_ATTRIBUTE]->(c2:Customer)
 WHERE e.attribute_type = 'bank_account'
@@ -567,6 +612,7 @@ RETURN c1.full_name, c2.full_name, e.shared_value_hash,
 ```
 
 ### Family fraud ring detection
+
 ```cypher
 MATCH (c1:Customer)-[r:CUSTOMER_RELATIONSHIPS]->(c2:Customer)
 WHERE r.relationship_type = 'FRAUD_RING_FAMILY_LINK'
@@ -579,5 +625,5 @@ ORDER BY r.confidence_score DESC
 
 ---
 
-*PRD v2.0 · Fraud Ring Detection: Graph-RAG System · Auto Insurance*
-*Last updated: 2025 · Confidential · Internal Use Only*
+*PRD v3.0 · Fraud Ring Detection: Graph-RAG System · Auto Insurance*
+*Last updated: April 2026 · Confidential · Internal Use Only*

@@ -3,16 +3,17 @@
 ## Project Overview
 
 Production-grade **auto insurance fraud ring detection** system combining a Neo4j knowledge graph,
-Graph Neural Networks (GraphSAGE + HINormer), GraphRAG (LangGraph + Claude via OpenRouter), and a
-Human-in-the-Loop (HITL) investigator workflow.
+Graph Neural Networks (GraphSAGE + HINormer), GraphRAG (LangGraph + Claude via OpenRouter), a
+Streamlit investigator UI, and a Human-in-the-Loop (HITL) feedback loop.
 
 **Rollout status:**
 
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
-| Phase 1 — Graph Load | Neo4j graph + rule engine + HITL queue | Complete ✅ |
-| Phase 2 — GNN Scoring | GraphSAGE + HINormer + XGB/RF/LGBM ensemble | Complete ✅ |
-| Phase 3 — GraphRAG | LangGraph pipeline + NL query + feedback loop | Complete ✅ |
+| Phase 1 — Graph Load | Neo4j graph + rule engine + HITL queue | Complete |
+| Phase 2 — GNN Scoring | GraphSAGE + HINormer + XGB/RF/LGBM ensemble | Complete |
+| Phase 3 — GraphRAG | LangGraph pipeline + NL query + feedback loop | Complete |
+| Phase 3b — Frontend | Streamlit UI + FastAPI deployment on Render | Complete |
 | Phase 4 — Streaming | Real-time Kinesis ingest + cross-carrier exchange | Not started |
 
 Full product spec: [PRD.md](PRD.md)
@@ -24,7 +25,7 @@ Full product spec: [PRD.md](PRD.md)
 ```
 FraudRingDetectionGraph-RAGSystem/
 │
-├── src/                                  — all application source code
+├── src/                                  — all backend application source code
 │   ├── main.py                           — unified CLI entry point
 │   ├── agent/
 │   │   └── pipeline.py                   — LangGraph StateGraph: retrieve → embed → reason
@@ -45,13 +46,19 @@ FraudRingDetectionGraph-RAGSystem/
 │   └── utils/
 │       ├── config.py                     — API keys, model names, prompts, embedding config
 │       ├── embedder.py                   — sentence-transformer embeddings
-│       └── feature_utils.py             — numeric/binary/ordinal feature extraction for GNN
+│       └── feature_utils.py              — numeric/binary/ordinal feature extraction for GNN
+│
+├── ui/                                   — Streamlit frontend (deploy to Streamlit Cloud)
+│   ├── streamlit_app.py                  — main app: Investigate / Query / Feedback / Stats tabs
+│   ├── requirements.txt                  — frontend deps: streamlit, requests, pandas
+│   └── .streamlit/
+│       ├── config.toml                   — dark theme configuration
+│       └── secrets.toml.example          — api_url template (copy → secrets.toml, gitignored)
 │
 ├── data/                                 — CSV node and edge files (14,292 nodes · 28,690 edges)
 │   ├── nodes_*.csv                       — 24 node type files
 │   ├── edges_*.csv                       — fixed-type relationship files
-│   ├── rel_*.csv                         — family relationship files
-│   └── edges_SHARED_ATTRIBUTES_master.csv
+│   └── rel_*.csv                         — family relationship files
 │
 ├── models/                               — saved artefacts (git-ignored)
 │   ├── fraud_gnn.pt                      — trained GNN weights
@@ -60,13 +67,14 @@ FraudRingDetectionGraph-RAGSystem/
 │   ├── feedback_labels.json              — investigator label overrides
 │   └── feedback_labels_meta.json         — feedback loop metadata
 │
-├── api.py                               — FastAPI web service (Render.com)
-├── build.sh                             — Render build script (CPU torch + requirements.txt)
-├── render.yaml                          — Render service definition (free plan + Pinecone)
-├── requirements.txt                     — production deps (Phase 3 runtime, Pinecone)
-├── requirements_phase2.txt              — local-only: PyTorch Geometric, XGBoost, LightGBM
-├── PRD.md                               — full product requirements document
-└── .env                                 — credentials (git-ignored, never commit)
+├── api.py                                — FastAPI web service (deploy to Render.com)
+├── build.sh                              — Render build script (CPU torch + requirements.txt)
+├── render.yaml                           — Render service definition (free plan + Pinecone)
+├── requirements.txt                      — API production deps (Phase 3 runtime, Pinecone)
+├── requirements_phase2.txt               — local-only: PyTorch Geometric, XGBoost, LightGBM
+├── README.md                             — setup, local dev, and deployment guide
+├── PRD.md                                — full product requirements document
+└── .env                                  — credentials (git-ignored, never commit)
 ```
 
 ---
@@ -77,6 +85,8 @@ FraudRingDetectionGraph-RAGSystem/
 
 - Python 3.11+
 - Neo4j Aura instance
+- OpenRouter API key
+- Pinecone account (free tier)
 - Virtual environment at `venv/`
 
 ### `.env` — all variables
@@ -92,36 +102,40 @@ NEO4J_TRUST_ALL_CERTS=true        # required on Windows — Aura intermediate CA
 DATA_DIR=./data
 BATCH_SIZE=200
 
-# ── OpenRouter (Phase 3 LLM) ───────────────────────────────────
+# ── OpenRouter (LLM) ───────────────────────────────────────────
 OPENROUTER_API_KEY=sk-or-...
 OPENROUTER_MODEL=anthropic/claude-sonnet-4-5   # optional, default shown
 
 # ── Vector store ───────────────────────────────────────────────
-VECTOR_STORE_BACKEND=local        # "local" or "pinecone"
-PINECONE_API_KEY=...              # only if backend=pinecone
-PINECONE_INDEX=fraud-rings        # only if backend=pinecone
+VECTOR_STORE_BACKEND=pinecone     # "local" or "pinecone"
+PINECONE_API_KEY=...
+PINECONE_INDEX=fraud-rings
 ```
 
 > `.env` is gitignored. Never commit credentials.
 
+### `ui/.streamlit/secrets.toml` — frontend config
+
+```toml
+api_url = "https://your-service.onrender.com"
+```
+
+> Copy from `ui/.streamlit/secrets.toml.example`. Also gitignored.
+
 ### Installation
 
 ```bash
-# Render.com deployment (Phase 3 runtime only)
-bash build.sh                 # installs CPU torch then requirements.txt
+# Phase 3 API runtime (FastAPI, LangGraph, embeddings, Neo4j, Pinecone)
+pip install -r requirements.txt
 
-# Local development — Phase 2 GNN training + scoring
+# Streamlit frontend (lightweight — streamlit, requests, pandas only)
+pip install -r ui/requirements.txt
+
+# Phase 2 GNN training (local only — not needed on Render)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install torch-geometric
-pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
 pip install -r requirements_phase2.txt
-
-# Local development — Phase 3 GraphRAG (already in requirements.txt)
-pip install -r requirements.txt
 ```
-
-> `requirements_phase2.txt` and `requirements_phase3.txt` are kept as references.
-> `requirements.txt` is the unified production file (Phase 3 runtime only).
 
 ---
 
@@ -155,7 +169,7 @@ python src/main.py gnn evaluate                           # re-evaluate saved mo
 ### Phase 3 — GraphRAG Pipeline
 
 ```bash
-# Run once after Phase 1/2 to build vector knowledge base (pushes to Pinecone)
+# Run once after Phase 1/2 — embeds FraudRing nodes and pushes to Pinecone
 python src/main.py rag index
 
 # Full GraphRAG investigation brief for a claim
@@ -172,13 +186,89 @@ python src/main.py rag feedback CLM-521585 --decision Dismiss   --investigator I
 python src/main.py rag feedback CLM-521585 --decision Escalate  --investigator INV-001 --feedback FN
 
 # Feedback-loop retraining
-python src/main.py rag retrain                            # retrain if ≥ 20 new reviews
+python src/main.py rag retrain                            # retrain if >= 20 new reviews
 python src/main.py rag retrain --evaluate-only            # F1 metrics, no retraining
 python src/main.py rag retrain --min-reviews 10           # lower threshold for testing
 
 # Stats
 python src/main.py rag stats
 ```
+
+### Local development — API + UI together
+
+```bash
+# Terminal 1: start FastAPI backend
+uvicorn api:app --reload --port 8000
+# Docs at http://localhost:8000/docs
+
+# Terminal 2: start Streamlit frontend
+streamlit run ui/streamlit_app.py
+# Opens at http://localhost:8501
+# Set Backend URL in sidebar to http://localhost:8000
+```
+
+---
+
+## Deployment
+
+### API → Render.com
+
+| File | Purpose |
+| ---- | ------- |
+| [api.py](api.py) | FastAPI web service wrapping the Phase 3 pipeline |
+| [build.sh](build.sh) | Installs CPU torch then requirements.txt |
+| [render.yaml](render.yaml) | Service definition — free plan, Pinecone backend |
+| [requirements.txt](requirements.txt) | Unified production dependencies |
+
+**Steps:**
+
+1. Push repo to GitHub
+2. New **Web Service** on Render → connect repo → Render picks up `render.yaml`
+3. Set secret env vars in Render dashboard:
+   - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
+   - `OPENROUTER_API_KEY`
+   - `PINECONE_API_KEY`
+
+### UI → Streamlit Community Cloud
+
+| File | Purpose |
+| ---- | ------- |
+| [ui/streamlit_app.py](ui/streamlit_app.py) | Main Streamlit app (4 tabs) |
+| [ui/requirements.txt](ui/requirements.txt) | streamlit + requests + pandas |
+| [ui/.streamlit/config.toml](ui/.streamlit/config.toml) | Dark theme |
+| [ui/.streamlit/secrets.toml.example](ui/.streamlit/secrets.toml.example) | api_url template |
+
+**Steps:**
+
+1. Go to share.streamlit.io → New app
+2. Main file path: `ui/streamlit_app.py`
+3. Requirements file: `ui/requirements.txt`
+4. In Advanced settings → Secrets add: `api_url = "https://your-service.onrender.com"`
+
+### Pinecone index (one-time, run locally before deploying)
+
+1. Create index in Pinecone console: name=`fraud-rings`, dimensions=`384`, metric=`cosine`
+2. Set `PINECONE_API_KEY` and `VECTOR_STORE_BACKEND=pinecone` in `.env`
+3. Run: `python src/main.py rag index`
+
+The index persists in Pinecone cloud — survives all Render deploys and cold starts.
+
+### Free plan RAM budget (Render)
+
+| Component | RAM |
+| --------- | --- |
+| PyTorch CPU runtime | ~200 MB |
+| `paraphrase-MiniLM-L3-v2` weights | ~17 MB |
+| FastAPI + all other libs | ~80 MB |
+| **Total** | **~300 MB — fits 512 MB free limit** |
+
+> Switch to `all-MiniLM-L6-v2` (90 MB, higher quality) by setting `EMBEDDING_MODEL=all-MiniLM-L6-v2`
+> and upgrading to the Standard plan. Both models output 384-dim — Pinecone index unchanged.
+
+### Phase 2 GNN on Render
+
+`torch-geometric` is **not** installed on Render. `trigger_retrain()` lazy-imports it and will
+fail clearly with `ImportError`. Run retraining locally and redeploy updated model weights.
 
 ---
 
@@ -197,8 +287,8 @@ property columns. All nodes use `_neo4j_id` (string) as the internal merge key.
 | `Claim` | 1,000 | `claim_id` | `ring_member_flag`, `staged_accident_flag`, `manual_override_flag` |
 | `FraudRing` | 20 | `ring_id` | `ring_score`, `status`, `closed_loop_detected` |
 | `Witness` | 1,487 | `statement_id` | `professional_witness_flag`, `coached_statement_flag` |
-| `Lawyer` | varies | `lawyer_id` | `closed_loop_network_flag`, `known_to_siu`, `prior_fraud_involvement_flag` |
-| `RepairShop` | varies | `shop_id` | `fraud_flag`, `inflated_estimate_rate_pct`, `siu_referral_count` |
+| `Lawyer` | 7 | `lawyer_id` | `closed_loop_network_flag`, `known_to_siu`, `prior_fraud_involvement_flag` |
+| `RepairShop` | 7 | `shop_id` | `fraud_flag`, `inflated_estimate_rate_pct`, `siu_referral_count` |
 | `InvestigationCase` | 876 | `case_id` | `ai_fraud_score`, `manual_override_triggered` |
 | `HumanReview` | 570 | `review_id` | `decision`, `override_ai_recommendation`, `feedback_to_model` |
 | `NetworkFeature` | 2,000 | `feature_id` | `pagerank_score`, `ring_suspicion_score`, `hop_2_fraud_count` |
@@ -252,7 +342,7 @@ ORDER BY c.final_suspicion_score DESC
 | ----- | ----- | ---------- | ------- |
 | **Layer 1** Rule engine | <100 ms | Deterministic Cypher + heuristics | Every claim at ingestion |
 | **Layer 2** GNN scoring | 42 ms/batch | PyTorch Geometric · GraphSAGE + HINormer | After Layer 1 signals |
-| **Layer 3** GraphRAG reasoning | On-demand | LangGraph · Claude via OpenRouter · LocalVectorStore | When HITL review triggered |
+| **Layer 3** GraphRAG reasoning | On-demand | LangGraph · Claude via OpenRouter · Pinecone | When HITL review triggered |
 
 ### Technology stack
 
@@ -260,16 +350,19 @@ ORDER BY c.final_suspicion_score DESC
 | --------- | ---------- |
 | Graph DB | Neo4j Aura (GDB + GDS) |
 | GNN | PyTorch Geometric · GraphSAGE (SAGEConv) · HINormer (HGTConv) |
-| Explainability | Gradient saliency (∂fraud_score/∂features) |
-| Embeddings | sentence-transformers · all-MiniLM-L6-v2 (384-dim) |
-| Vector KB | LocalVectorStore (numpy .npz) or Pinecone |
+| Explainability | Gradient saliency (d_fraud_score / d_features) |
+| Embeddings | sentence-transformers · paraphrase-MiniLM-L3-v2 (384-dim, 17 MB) |
+| Vector KB | Pinecone (production) / LocalVectorStore numpy (dev) |
 | Agentic pipeline | LangGraph StateGraph |
 | LLM reasoning | Claude via OpenRouter (openai-compatible API) |
+| Web API | FastAPI + uvicorn |
+| Frontend | Streamlit (4 tabs: Investigate / Query / Feedback / Stats) |
 | Oversampling | SMOTE + ADASYN (training time only — never inference) |
+| API hosting | Render.com (free plan) |
+| UI hosting | Streamlit Community Cloud (free) |
 | Streaming ingest | Amazon Kinesis + Neo4j Kafka Connector (Phase 4) |
 | Batch ETL | AWS Glue + EMR (Phase 4) |
-| Visualization | Neo4j Bloom + React dashboard |
-| ML serving | Amazon SageMaker |
+| ML serving | Amazon SageMaker (Phase 4) |
 
 ---
 
@@ -279,20 +372,20 @@ ORDER BY c.final_suspicion_score DESC
 
 ```text
 Input features (per node type, from CSV columns)
-    │
-    ▼  type-specific Linear → hidden_channels (128)
-    │
-    ▼  SAGEConv — inductive, handles new nodes at inference
+    |
+    v  type-specific Linear → hidden_channels (128)
+    |
+    v  SAGEConv — inductive, handles new nodes at inference
        HeteroConv wrapper: one SAGEConv per edge type
-    │
-    ▼  BatchNorm + ReLU + Dropout(0.3)
-    │
-    ▼  HGTConv — heterogeneous transformer attention (heads=4)
+    |
+    v  BatchNorm + ReLU + Dropout(0.3)
+    |
+    v  HGTConv — heterogeneous transformer attention (heads=4)
        type-specific attention weights per (src_type, edge_type, dst_type)
-    │
-    ▼  BatchNorm + ReLU + Dropout(0.3)
-    │
-    ▼  Classifier head: Linear(128→64) → ReLU → Linear(64→1) → sigmoid
+    |
+    v  BatchNorm + ReLU + Dropout(0.3)
+    |
+    v  Classifier head: Linear(128→64) → ReLU → Linear(64→1) → sigmoid
        Applied to Claim node embeddings only
 ```
 
@@ -301,7 +394,7 @@ Input features (per node type, from CSV columns)
 | Stage | Technique | When |
 | ----- | --------- | ---- |
 | GNN training | BCEWithLogitsLoss `pos_weight = #neg / #pos` | Training only |
-| Embedding augmentation | SMOTE + ADASYN on Claim embeddings | Training only ⚠️ |
+| Embedding augmentation | SMOTE + ADASYN on Claim embeddings | Training only |
 | Ensemble | XGBoost + RandomForest + LightGBM on augmented embeddings | Training + inference |
 
 > **Critical rule:** `apply_smote_adasyn()` must never be called on val/test/production data.
@@ -312,7 +405,7 @@ Input features (per node type, from CSV columns)
 | -------- | ---- | ----------- |
 | `gnn_suspicion_score` | Claim | Raw GNN sigmoid probability |
 | `ensemble_suspicion_score` | Claim | Mean of XGB + RF + LGBM probabilities |
-| `final_suspicion_score` | Claim | Blended score (0.5 × GNN + 0.5 × ensemble) |
+| `final_suspicion_score` | Claim | Blended score (0.5 x GNN + 0.5 x ensemble) |
 | `adjuster_priority_tier` | Claim | Critical / High Priority / Standard |
 | `ai_fraud_score` | InvestigationCase | `final_suspicion_score` of linked claim |
 
@@ -320,8 +413,8 @@ Input features (per node type, from CSV columns)
 
 | Score | Tier | Action |
 | ----- | ---- | ------ |
-| ≥ 0.90 | Critical | Mandatory Override (OVR-001) — payment HOLD |
-| ≥ 0.70 | High Priority | Priority queue — 4 hr SLA |
+| >= 0.90 | Critical | Mandatory Override (OVR-001) — payment HOLD |
+| >= 0.70 | High Priority | Priority queue — 4 hr SLA |
 | < 0.70 | Standard | Standard queue — 30 min SLA |
 
 ---
@@ -332,26 +425,21 @@ Input features (per node type, from CSV columns)
 
 ```text
 Claim ID
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  LangGraph StateGraph  (phase3_rag/pipeline.py)                     │
-│                                                                     │
-│  retrieve_subgraph           find_analogous_rings                   │
-│  ──────────────────          ──────────────────────                 │
-│  Neo4j Cypher query    →     Embed subgraph text (384-dim)    →     │
-│  claim neighbours            cosine search LocalVectorStore         │
-│  (customer, lawyer,          top-K = 3 historical rings             │
-│   shop, witnesses x10,                                              │
-│   medical, ring,                  generate_reasoning                │
-│   investigation_case,             ──────────────────                │
-│   network_feature,                Claude via OpenRouter             │
-│   shared_attributes)              (anthropic/claude-sonnet-4-5)     │
-│                                   REASONING_SYSTEM_PROMPT           │
-│                                   + subgraph + analogous rings      │
-│                                   + OVR override triggers           │
-│                                   → Investigation Brief             │
-└─────────────────────────────────────────────────────────────────────┘
+    |
+    v  retrieve_subgraph  (src/services/graph_retriever.py)
+       Neo4j Cypher: claim + customer + lawyer + shop + witnesses
+                   + ring + investigation_case + network_feature
+                   + shared_attributes
+    |
+    v  find_analogous_rings  (src/services/vector_store.py)
+       Embed subgraph text (384-dim) → cosine search Pinecone
+       top-K = 3 historical rings
+    |
+    v  generate_reasoning  (src/agent/pipeline.py)
+       Claude via OpenRouter (anthropic/claude-sonnet-4-5)
+       REASONING_SYSTEM_PROMPT + subgraph + analogous rings
+       + OVR override trigger evaluation
+       → Investigation Brief
 ```
 
 ### LangGraph state keys
@@ -365,18 +453,18 @@ Claim ID
 | `analogous_rings` | list | `[{id, score, metadata}, ...]` top-K similar rings |
 | `override_triggers` | list[str] | OVR codes that fired |
 | `reasoning_trace` | str | Claude investigation brief |
-| `error` | str\|None | Populated if any node fails |
+| `error` | str or None | Populated if any node fails |
 
 ### Mandatory Override triggers (payment HOLD)
 
 | Code | Condition |
 | ---- | --------- |
-| OVR-001 | Ring suspicion score ≥ 0.90 |
+| OVR-001 | Ring suspicion score >= 0.90 |
 | OVR-002 | Projected ring exposure > $75K |
 | OVR-003 | Same attorney/witness/shop across jurisdictions |
 | OVR-004 | Previously dismissed ring entity reappears |
 | OVR-005 | Licensed attorney is primary connecting edge |
-| OVR-006 | Vulnerable claimant (elderly ≥ 65, language barrier) |
+| OVR-006 | Vulnerable claimant (elderly >= 65, language barrier) |
 | OVR-007 | Public figure / prior media coverage |
 | OVR-008 | Any node has a prior SIU referral |
 
@@ -426,7 +514,7 @@ FORBIDDEN_KEYWORDS = re.compile(
 | Dismiss | 0 | False positive |
 
 `feedback_to_model` signal: `Correct` / `FP` / `FN` / `Uncertain`
-(Uncertain is excluded from retraining labels)
+(`Uncertain` is excluded from retraining labels)
 
 ### Retraining flow
 
@@ -437,21 +525,21 @@ FeedbackStore.collect()
     ↓  pulls rows since last training run, maps to binary labels
 compute_f1_delta()
     ↓  compares model predictions vs investigator ground truth
-trigger_retrain()  (requires ≥ 20 labelled reviews)
+trigger_retrain()  (requires >= 20 labelled reviews)
     ↓  saves feedback_labels.json
     ↓  calls Phase 2 run_training() with feedback-weighted labels
     ↓  computes F1 delta — promotes new model only if F1 improves
 ```
 
-### LLM routing
+### LLM call sites
 
-All three Claude call sites use the `openai` Python package pointed at OpenRouter:
+All Claude calls use the `openai` Python package pointed at OpenRouter:
 
-| Call site | System prompt | Purpose |
-| --------- | ------------- | ------- |
-| `pipeline.py` | `REASONING_SYSTEM_PROMPT` | Investigation brief generation |
-| `nl_query.py` | `NL_QUERY_SYSTEM_PROMPT` | NL → Cypher conversion |
-| `nl_query.py` | `RESULT_FORMATTER_SYSTEM_PROMPT` | Result summarisation |
+| File | System prompt | Purpose |
+| ---- | ------------- | ------- |
+| `src/agent/pipeline.py` | `REASONING_SYSTEM_PROMPT` | Investigation brief generation |
+| `src/tools/nl_query.py` | `NL_QUERY_SYSTEM_PROMPT` | NL → Cypher conversion |
+| `src/tools/nl_query.py` | `RESULT_FORMATTER_SYSTEM_PROMPT` | Result summarisation |
 
 Model: configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-sonnet-4-5`.
 
@@ -459,8 +547,23 @@ Model: configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-s
 
 | Backend | Config | Use case |
 | ------- | ------ | -------- |
-| `local` (default) | No extra config | Development / ≤ 100K rings |
-| `pinecone` | `PINECONE_API_KEY` + `PINECONE_INDEX` | Production ANN search |
+| `pinecone` (default) | `PINECONE_API_KEY` + `PINECONE_INDEX` | Production — persists across deploys |
+| `local` | No extra config | Development / offline / <= 100K rings |
+
+---
+
+## Streamlit Frontend
+
+Four-tab investigator UI in `ui/streamlit_app.py`:
+
+| Tab | Function |
+| --- | -------- |
+| Investigate Claim | Enter claim ID → fraud score banner + override triggers + analogous rings + Claude brief |
+| Graph Query | Natural language question → Cypher → Neo4j → NL answer |
+| Record Feedback | Form to submit Approve / Dismiss / Escalate with confidence and override reason |
+| Stats & History | Total reviews, vector store size, F1 history table |
+
+The app reads `api_url` from `ui/.streamlit/secrets.toml` (Streamlit Cloud) or the sidebar input (local dev). All heavy computation runs in the FastAPI backend — the UI is request-only.
 
 ---
 
@@ -470,7 +573,7 @@ Model: configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-s
 | ------ | ------ | ------- |
 | Human Agreement Rate | > 65% | > 80% |
 | False Positive Rate | < 35% | < 20% |
-| Model AUC-ROC | ≥ 0.91 | ≥ 0.95 |
+| Model AUC-ROC | >= 0.91 | >= 0.95 |
 | Mean Time to Decision (Standard) | < 30 min | < 20 min |
 | Mean Time to Decision (Override) | < 4 hours | < 2 hours |
 
@@ -486,95 +589,15 @@ Model: configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-s
 
 ---
 
-## Render.com Deployment
-
-### New files
-
-| File | Purpose |
-| ---- | ------- |
-| [requirements.txt](requirements.txt) | Unified production dependencies (Phase 3 runtime only) |
-| [build.sh](build.sh) | Render build script — installs CPU torch before requirements.txt |
-| [api.py](api.py) | FastAPI web service wrapping the Phase 3 pipeline |
-| [render.yaml](render.yaml) | Render service definition + environment variable declarations |
-
-### REST API endpoints
-
-| Method | Path | Description |
-| ------ | ---- | ----------- |
-| `GET` | `/health` | Liveness probe |
-| `POST` | `/explain/{claim_id}` | Full GraphRAG investigation brief |
-| `POST` | `/query` | Natural language graph query |
-| `POST` | `/feedback/{claim_id}` | Record investigator decision |
-| `GET` | `/stats` | Feedback history + vector store size |
-
-### Pinecone setup (one-time, run locally)
-
-1. Create a free account at [pinecone.io](https://pinecone.io)
-2. Create an index with these settings:
-   - **Name:** `fraud-rings`
-   - **Dimensions:** `384`
-   - **Metric:** `cosine`
-3. Copy the API key
-4. Set in `.env`: `PINECONE_API_KEY=...` and `VECTOR_STORE_BACKEND=pinecone`
-5. Run the indexer locally — this pushes all 20 FraudRing embeddings into Pinecone:
-
-   ```bash
-   python run_phase3.py index
-   ```
-
-   The index now lives in Pinecone (not in `models/vector_store.npz`) and persists across all Render deploys.
-
-### Deploy steps
-
-1. Push repo to GitHub
-2. Create new **Web Service** on Render, connect the repo
-3. Render picks up `render.yaml` automatically (free plan, Pinecone backend)
-4. Set these secret env vars in the Render dashboard (marked `sync: false`):
-   - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
-   - `OPENROUTER_API_KEY`
-   - `PINECONE_API_KEY`
-
-### Free plan RAM budget
-
-| Component | RAM |
-| --------- | --- |
-| PyTorch CPU runtime | ~200 MB |
-| `paraphrase-MiniLM-L3-v2` weights | ~17 MB |
-| FastAPI + all other libs | ~80 MB |
-| **Total** | **~300 MB** — fits within 512 MB free limit |
-
-> The default embedding model is `paraphrase-MiniLM-L3-v2` (384-dim, 17 MB).
-> Switch to `all-MiniLM-L6-v2` (384-dim, 90 MB, higher quality) by setting
-> `EMBEDDING_MODEL=all-MiniLM-L6-v2` — requires the Standard plan.
-> Both models output 384-dim so the **Pinecone index does not change**.
-
-### Embedding model options
-
-| Model | Weights | RAM | Quality | Plan |
-| ----- | ------- | --- | ------- | ---- |
-| `paraphrase-MiniLM-L3-v2` | 17 MB | ~300 MB total | Good | Free ✅ |
-| `all-MiniLM-L6-v2` | 90 MB | ~400 MB total | Better | Standard |
-
-### Phase 2 GNN on Render
-
-`torch-geometric` is **not** installed on Render. The `trigger_retrain()` call in `feedback.py`
-lazy-imports `phase2_gnn.train` and will fail clearly with an `ImportError` if called.
-Run retraining locally and redeploy updated model weights.
-
-### Local development
-
-```bash
-uvicorn api:app --reload --port 8000
-# API docs at http://localhost:8000/docs
-```
-
----
-
-## Known Fixes
+## Known Fixes Applied
 
 | Issue | File | Fix |
 | ----- | ---- | --- |
-| `OPENROUTER_API_KEY` read as `None` despite being set in `.env` | [phase3_rag/config.py](phase3_rag/config.py) | Added `load_dotenv()` before `os.getenv()` calls |
-| `FutureWarning: get_sentence_embedding_dimension` renamed in sentence-transformers ≥ 3.x | [phase3_rag/embedder.py](phase3_rag/embedder.py) | `getattr` probe for `get_embedding_dimension()` with fallback |
-| `ReduceLROnPlateau` `verbose` kwarg removed in PyTorch ≥ 2.2 | [phase2_gnn/train.py](phase2_gnn/train.py) | Removed `verbose=False` from scheduler init |
-| LightGBM `UserWarning: X does not have valid feature names` at inference | [phase2_gnn/scorer.py](phase2_gnn/scorer.py), [phase2_gnn/train.py](phase2_gnn/train.py) | Cast to plain numpy + `warnings.catch_warnings()` filter |
+| `OPENROUTER_API_KEY` read as `None` despite being set in `.env` | `src/utils/config.py` | Added `load_dotenv()` before `os.getenv()` calls |
+| `FutureWarning: get_sentence_embedding_dimension` renamed in sentence-transformers >= 3.x | `src/utils/embedder.py` | `getattr` probe for `get_embedding_dimension()` with fallback |
+| `ReduceLROnPlateau` `verbose` kwarg removed in PyTorch >= 2.2 | `src/services/gnn/train.py` | Removed `verbose=False` from scheduler init |
+| LightGBM `UserWarning: X does not have valid feature names` at inference | `src/services/gnn/scorer.py`, `train.py` | Cast to plain numpy + `warnings.catch_warnings()` filter |
+| `argparse.ArgumentError: conflicting subparser: score` in main.py | `src/main.py` | Removed duplicate `score` subparser registration |
+| `load_graph.py` `parser.parse_args()` ran at import time | `src/tools/load_graph.py` | Moved all arg parsing inside `main()` via `_build_parser()` |
+| `pinecone-client` package renamed to `pinecone` | `requirements.txt` | Changed to `pinecone>=5.0.0`; uninstalled old package |
+| Emoji in print statements caused `UnicodeEncodeError` on Windows cp1252 terminal | `src/main.py`, `src/tools/load_graph.py` | Replaced all emoji with ASCII equivalents |
