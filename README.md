@@ -35,9 +35,9 @@ Layer 4 — HITL Review                     Investigator decisions feed back int
 
 ## Repository Structure
 
-```
+```text
 FraudRingDetectionGraph-RAGSystem/
-├── src/
+├── src/                               Backend application source
 │   ├── main.py                        Unified CLI entry point
 │   ├── agent/
 │   │   └── pipeline.py                LangGraph StateGraph (retrieve -> embed -> reason)
@@ -58,53 +58,83 @@ FraudRingDetectionGraph-RAGSystem/
 │   └── utils/
 │       ├── config.py                  API keys, model names, prompts, embedding config
 │       ├── embedder.py                Sentence-transformer ring/claim embeddings
-│       └── feature_utils.py           Numeric/binary/ordinal feature extraction for GNN
+│       └── feature_utils.py           Feature extraction for GNN
+│
+├── ui/                                Streamlit frontend (deploy to Streamlit Cloud)
+│   ├── streamlit_app.py               Main Streamlit app (4 tabs)
+│   ├── requirements.txt               Frontend deps: streamlit, requests, pandas
+│   └── .streamlit/
+│       ├── config.toml                Dark theme
+│       └── secrets.toml.example       API URL template (copy -> secrets.toml)
+│
 ├── data/                              CSV node and edge files
 │   ├── nodes_*.csv                    24 node type files
 │   └── edges_*.csv / rel_*.csv        Edge and relationship files
+│
 ├── models/                            Saved artefacts (git-ignored)
 │   ├── fraud_gnn.pt                   Trained GNN weights
 │   ├── ensemble.pkl                   XGB + RF + LGBM ensemble
 │   └── scaler.pkl                     Feature scaler
-├── api.py                             FastAPI web service (Render.com)
-├── build.sh                           Render build script (CPU torch + requirements.txt)
+│
+├── api.py                             FastAPI web service (deploy to Render.com)
+├── build.sh                           Render build script
 ├── render.yaml                        Render service definition
-├── requirements.txt                   Production dependencies
+├── requirements.txt                   API production dependencies
 └── requirements_phase2.txt            Local-only: PyTorch Geometric, XGBoost, LightGBM
 ```
 
 ---
 
-## Quick Start
+## External Services Required
+
+| Service | Purpose | Free tier |
+| ------- | ------- | --------- |
+| Neo4j Aura | Graph database | Free (200K nodes) |
+| OpenRouter | LLM API (Claude) | Pay-per-token |
+| Pinecone | Vector store | Free (1 index, 100K vectors) |
+| Render.com | API hosting | Free (512 MB RAM, spins down) |
+| Streamlit Community Cloud | UI hosting | Free |
+
+---
+
+## Local Development
 
 ### Prerequisites
 
 - Python 3.11+
-- Neo4j Aura instance ([console.neo4j.io](https://console.neo4j.io))
-- OpenRouter API key ([openrouter.ai](https://openrouter.ai))
-- Pinecone account ([pinecone.io](https://pinecone.io)) — free tier works
+- Git
 
-### 1. Clone and install
+### Step 1 — Clone and create virtual environment
 
 ```bash
 git clone <repo-url>
 cd FraudRingDetectionGraph-RAGSystem
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
 
-# Phase 3 runtime (API, GraphRAG, embeddings)
+# Windows
+venv\Scripts\activate
+# Mac / Linux
+source venv/bin/activate
+```
+
+### Step 2 — Install dependencies
+
+```bash
+# API backend (FastAPI, LangGraph, embeddings, Neo4j, Pinecone)
 pip install -r requirements.txt
 
-# Phase 2 GNN training (local only — not needed on Render)
+# Streamlit frontend (separate, lightweight)
+pip install -r ui/requirements.txt
+
+# Phase 2 GNN training (optional — only needed to retrain the model)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install torch-geometric
 pip install -r requirements_phase2.txt
 ```
 
-### 2. Configure `.env`
+### Step 3 — Configure `.env`
 
-Create a `.env` file in the project root:
+Create `.env` in the project root:
 
 ```env
 # Neo4j Aura
@@ -127,52 +157,80 @@ DATA_DIR=./data
 BATCH_SIZE=200
 ```
 
-### 3. Create Pinecone index
+### Step 4 — Create Pinecone index (one-time)
 
-In the Pinecone console, create an index with:
-- **Name:** `fraud-rings`
-- **Dimensions:** `384`
-- **Metric:** `Cosine`
+In the [Pinecone console](https://app.pinecone.io), create an index:
 
-### 4. Load the graph (Phase 1)
+| Setting | Value |
+| ------- | ----- |
+| Name | `fraud-rings` |
+| Dimensions | `384` |
+| Metric | `Cosine` |
+| Pod type | `Starter` (free) |
+
+### Step 5 — Load graph data into Neo4j (one-time)
 
 ```bash
-# Validate CSV files (no DB writes)
+# Validate CSV files first (no DB writes)
 python src/main.py load-graph --dry-run
 
-# Load all nodes and edges into Neo4j
+# Load all 14,292 nodes and 28,690 edges
 python src/main.py load-graph
 ```
 
-### 5. Train the GNN (Phase 2 — local only)
+### Step 6 — Train GNN and score claims (one-time, optional)
 
 ```bash
-python src/main.py gnn train
-python src/main.py gnn score          # write scores to Neo4j
+python src/main.py gnn train                                    # trains + saves to models/
+python src/main.py gnn score                                    # writes scores to Neo4j
 python src/main.py gnn explain --top-n 20 --output traces.json
 ```
 
-### 6. Build the vector knowledge base (Phase 3)
+### Step 7 — Index fraud rings into Pinecone (one-time)
 
 ```bash
-# Embed all FraudRing nodes and push to Pinecone (run once)
+# Embeds all FraudRing nodes and pushes 384-dim vectors to Pinecone
 python src/main.py rag index
 ```
 
-### 7. Run investigations
+### Step 8 — Run the API backend
 
 ```bash
-# Full GraphRAG investigation brief for a claim
+uvicorn api:app --reload --port 8000
+# API docs at http://localhost:8000/docs
+# Health check: http://localhost:8000/health
+```
+
+### Step 9 — Run the Streamlit frontend
+
+Open a second terminal (keep the API running):
+
+```bash
+# Activate venv if not already active
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac / Linux
+
+streamlit run ui/streamlit_app.py
+# Opens at http://localhost:8501
+```
+
+In the Streamlit sidebar, set the **Backend URL** to `http://localhost:8000` and click **Check Connection**.
+
+### CLI commands (without the UI)
+
+```bash
+# GraphRAG investigation brief
 python src/main.py rag explain CLM-521585
 python src/main.py rag explain CLM-521585 --verbose
 
 # Natural language queries
 python src/main.py rag query --question "Which fraud rings have a lawyer in 3+ claims?"
-python src/main.py rag query    # interactive REPL
+python src/main.py rag query                # interactive REPL
 
 # Record investigator decisions
-python src/main.py rag feedback CLM-521585 --decision Approve --investigator INV-001
-python src/main.py rag feedback CLM-521585 --decision Dismiss --investigator INV-001 --feedback FP
+python src/main.py rag feedback CLM-521585 --decision Approve   --investigator INV-001
+python src/main.py rag feedback CLM-521585 --decision Dismiss   --investigator INV-001 --feedback FP
+python src/main.py rag feedback CLM-521585 --decision Escalate  --investigator INV-001 --feedback FN
 
 # Feedback-loop retraining
 python src/main.py rag retrain --evaluate-only
@@ -184,30 +242,147 @@ python src/main.py rag stats
 
 ---
 
-## REST API
+## Production Deployment
 
-Start locally:
+### Overview
 
-```bash
-uvicorn api:app --reload --port 8000
-# Docs at http://localhost:8000/docs
+```text
+GitHub repo
+    │
+    ├──► Render.com          → hosts api.py        (FastAPI backend)
+    │         URL: https://your-service.onrender.com
+    │
+    └──► Streamlit Cloud     → hosts ui/streamlit_app.py  (Streamlit frontend)
+              URL: https://your-app.streamlit.app
 ```
 
+The Streamlit frontend calls the Render API over HTTPS. No backend code runs in Streamlit Cloud.
+
+---
+
+### Part A — Deploy API to Render.com
+
+#### A1 — Push repo to GitHub
+
+```bash
+git add .
+git commit -m "ready for deployment"
+git push origin main
+```
+
+#### A2 — Create Render Web Service
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) → **New** → **Web Service**
+2. Connect your GitHub repo
+3. Render detects `render.yaml` automatically and pre-fills:
+   - **Build command:** `bash build.sh`
+   - **Start command:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
+   - **Plan:** Free
+
+#### A3 — Set secret environment variables
+
+In the Render dashboard → **Environment**, add these (marked **Secret**):
+
+| Key | Value |
+| --- | ----- |
+| `NEO4J_URI` | `neo4j+s://<instance-id>.databases.neo4j.io` |
+| `NEO4J_USER` | `neo4j` |
+| `NEO4J_PASSWORD` | your Neo4j password |
+| `OPENROUTER_API_KEY` | `sk-or-...` |
+| `PINECONE_API_KEY` | your Pinecone API key |
+
+These are already declared in `render.yaml` with `sync: false` — Render will prompt for their values at deploy time.
+
+#### A4 — Deploy
+
+Click **Create Web Service**. Render runs `build.sh` (installs CPU torch + requirements.txt) then starts the API.
+
+**Verify:** `https://your-service.onrender.com/health` should return `{"status": "ok"}`.
+
+> **Free plan note:** The service spins down after 15 minutes of inactivity. The first request after a cold start takes ~30 seconds. Upgrade to the Starter plan ($7/mo) to eliminate cold starts.
+
+---
+
+### Part B — Deploy UI to Streamlit Community Cloud
+
+#### B1 — Configure Streamlit secrets locally
+
+```bash
+cp ui/.streamlit/secrets.toml.example ui/.streamlit/secrets.toml
+```
+
+Edit `ui/.streamlit/secrets.toml`:
+
+```toml
+api_url = "https://your-service.onrender.com"
+```
+
+> `ui/.streamlit/secrets.toml` is gitignored — never commit it.
+
+#### B2 — Create Streamlit Cloud app
+
+1. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
+2. Fill in the fields:
+
+   | Field | Value |
+   | ----- | ----- |
+   | Repository | your GitHub repo |
+   | Branch | `main` |
+   | Main file path | `ui/streamlit_app.py` |
+   | App URL | choose a name (e.g. `fraud-ring-detection`) |
+
+3. Click **Advanced settings** and set the **Python version** to `3.11`
+
+#### B3 — Add secrets in Streamlit Cloud
+
+In **Advanced settings → Secrets**, paste:
+
+```toml
+api_url = "https://your-service.onrender.com"
+```
+
+Replace the URL with your actual Render service URL from Part A.
+
+#### B4 — Deploy
+
+Click **Deploy**. Streamlit Cloud installs from `ui/requirements.txt` (only `streamlit`, `requests`, `pandas` — no heavy ML deps).
+
+**Verify:** The app opens, enter the Render URL in the sidebar, click **Check Connection** — should show **API online**.
+
+---
+
+### Free Plan RAM Budget (Render)
+
+| Component | RAM |
+| --------- | --- |
+| PyTorch CPU runtime | ~200 MB |
+| `paraphrase-MiniLM-L3-v2` weights | ~17 MB |
+| FastAPI + all other libs | ~80 MB |
+| **Total** | **~300 MB — fits 512 MB free limit** |
+
+> To use the higher-quality `all-MiniLM-L6-v2` model (90 MB, better embeddings), set `EMBEDDING_MODEL=all-MiniLM-L6-v2` in Render and upgrade to the Standard plan. Both models output 384-dim vectors — the Pinecone index does not change.
+
+---
+
+## REST API Reference
+
 | Method | Endpoint | Description |
-| -------- | ---------- | ------------- |
+| ------ | -------- | ----------- |
 | `GET` | `/health` | Liveness probe |
 | `POST` | `/explain/{claim_id}` | Full GraphRAG investigation brief |
 | `POST` | `/query` | Natural language graph query |
 | `POST` | `/feedback/{claim_id}` | Record investigator decision |
 | `GET` | `/stats` | Feedback history + vector store size |
 
+Interactive docs: `http://localhost:8000/docs` (local) or `https://your-service.onrender.com/docs` (production).
+
 ---
 
 ## GNN Model
 
-### Architecture
+### Model Architecture
 
-```
+```text
 Input features (per node type)
     |
     v  type-specific Linear -> 128 hidden channels
@@ -228,7 +403,7 @@ Input features (per node type)
 ### Score tiers written to Neo4j
 
 | Score | Tier | Action |
-| ------- | ------ | -------- |
+| ----- | ---- | ------ |
 | >= 0.90 | Critical | Mandatory Override — payment HOLD |
 | >= 0.70 | High Priority | Priority queue — 4 hr SLA |
 | < 0.70 | Standard | Standard queue — 30 min SLA |
@@ -236,18 +411,18 @@ Input features (per node type)
 ### Properties written to Neo4j by the scorer
 
 | Property | Node | Description |
-| ---------- | ------ | ------------- |
+| -------- | ---- | ----------- |
 | `gnn_suspicion_score` | Claim | Raw GNN sigmoid probability |
 | `ensemble_suspicion_score` | Claim | Mean of XGB + RF + LGBM |
 | `final_suspicion_score` | Claim | 0.5 x GNN + 0.5 x ensemble |
 | `adjuster_priority_tier` | Claim | Critical / High Priority / Standard |
-| `ai_fraud_score` | InvestigationCase | final_suspicion_score of linked claim |
+| `ai_fraud_score` | InvestigationCase | `final_suspicion_score` of linked claim |
 
 ---
 
 ## GraphRAG Pipeline
 
-```
+```text
 Claim ID
     |
     v  retrieve_subgraph
@@ -263,7 +438,7 @@ Claim ID
 ### Mandatory Override triggers
 
 | Code | Condition |
-| ------ | ----------- |
+| ---- | --------- |
 | OVR-001 | Ring suspicion score >= 0.90 |
 | OVR-002 | Projected ring exposure > $75K |
 | OVR-003 | Same attorney/witness/shop across jurisdictions |
@@ -275,42 +450,9 @@ Claim ID
 
 ---
 
-## Render.com Deployment
-
-### Deploy steps
-
-1. Push repo to GitHub
-2. Create a **Web Service** on Render and connect the repo
-3. Render picks up `render.yaml` automatically (free plan)
-4. Set secret env vars in the Render dashboard (`sync: false` fields):
-   - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`
-   - `OPENROUTER_API_KEY`
-   - `PINECONE_API_KEY`
-
-### Free plan RAM budget
-
-| Component | RAM |
-| ----------- | ----- |
-| PyTorch CPU runtime | ~200 MB |
-| paraphrase-MiniLM-L3-v2 weights | ~17 MB |
-| FastAPI + dependencies | ~80 MB |
-| **Total** | **~300 MB** — fits 512 MB free limit |
-
-> To use the higher-quality `all-MiniLM-L6-v2` model (90 MB weights), set
-> `EMBEDDING_MODEL=all-MiniLM-L6-v2` and upgrade to the Standard plan.
-> Both models output 384-dim vectors — the Pinecone index does not change.
-
-### Why Pinecone?
-
-Render's free plan has no persistent disk. Pinecone stores the vector index in the cloud so it
-survives every deploy and cold start. Run `python src/main.py rag index` once locally to populate
-it; the Render service only reads from it at query time.
-
----
-
 ## HITL Feedback Loop
 
-```
+```text
 Investigator decisions (Approve / Dismiss / Escalate)
     |  stored as HumanReview nodes in Neo4j
     v
@@ -327,7 +469,7 @@ trigger_retrain()  (requires >= 20 labelled reviews)
 ```
 
 | Decision | Label |
-| ---------- | ------- |
+| -------- | ----- |
 | Approve | 1 (fraud confirmed) |
 | Escalate | 1 (serious fraud) |
 | Dismiss | 0 (false positive) |
@@ -337,7 +479,7 @@ trigger_retrain()  (requires >= 20 labelled reviews)
 ## Success Targets
 
 | Metric | Launch | Month 6 |
-| -------- | -------- | --------- |
+| ------ | ------ | ------- |
 | Human Agreement Rate | > 65% | > 80% |
 | False Positive Rate | < 35% | < 20% |
 | Model AUC-ROC | >= 0.91 | >= 0.95 |
@@ -359,7 +501,7 @@ trigger_retrain()  (requires >= 20 labelled reviews)
 ## Technology Stack
 
 | Component | Technology |
-| ----------- | ----------- |
+| --------- | ---------- |
 | Graph DB | Neo4j Aura |
 | GNN | PyTorch Geometric — GraphSAGE (SAGEConv) + HINormer (HGTConv) |
 | Ensemble | XGBoost + RandomForest + LightGBM |
@@ -368,4 +510,6 @@ trigger_retrain()  (requires >= 20 labelled reviews)
 | Agentic pipeline | LangGraph StateGraph |
 | LLM | Claude via OpenRouter (openai-compatible API) |
 | Web API | FastAPI + uvicorn |
-| Deployment | Render.com (free plan) |
+| Frontend | Streamlit |
+| API hosting | Render.com (free plan) |
+| UI hosting | Streamlit Community Cloud (free) |
