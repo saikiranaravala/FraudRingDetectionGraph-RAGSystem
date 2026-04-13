@@ -55,7 +55,7 @@ _feedback_store = None
 def _get_retriever():
     global _retriever
     if _retriever is None:
-        from phase3_rag.graph_retriever import GraphRetriever
+        from src.services.graph_retriever import GraphRetriever
         _retriever = GraphRetriever()
     return _retriever
 
@@ -63,10 +63,10 @@ def _get_retriever():
 def _get_pipeline_deps():
     global _vector_store, _embedder, _llm_client
     if _vector_store is None:
-        from phase3_rag.vector_store import get_vector_store
-        from phase3_rag.embedder import FraudEmbedder
+        from src.services.vector_store import get_vector_store
+        from src.utils.embedder import FraudEmbedder
         from openai import OpenAI
-        from phase3_rag import config as C
+        from src.utils import config as C
         _vector_store = get_vector_store(load_existing=True)
         _embedder     = FraudEmbedder()
         _llm_client   = OpenAI(api_key=C.OPENROUTER_API_KEY, base_url=C.OPENROUTER_BASE_URL)
@@ -76,7 +76,7 @@ def _get_pipeline_deps():
 def _get_nl_engine():
     global _nl_engine
     if _nl_engine is None:
-        from phase3_rag.nl_query import NLQueryEngine
+        from src.tools.nl_query import NLQueryEngine
         retriever = _get_retriever()
         _, _, llm = _get_pipeline_deps()
         _nl_engine = NLQueryEngine(retriever=retriever, llm_client=llm)
@@ -86,7 +86,7 @@ def _get_nl_engine():
 def _get_feedback_store():
     global _feedback_store
     if _feedback_store is None:
-        from phase3_rag.feedback import FeedbackStore
+        from src.services.feedback import FeedbackStore
         _feedback_store = FeedbackStore(retriever=_get_retriever())
     return _feedback_store
 
@@ -147,7 +147,7 @@ def explain(claim_id: str):
     Returns the Claude investigation brief + override triggers + analogous rings.
     """
     try:
-        from phase3_rag.pipeline import run_pipeline
+        from src.agent.pipeline import run_pipeline
         retriever = _get_retriever()
         vs, emb, llm = _get_pipeline_deps()
 

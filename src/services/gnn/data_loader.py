@@ -31,7 +31,7 @@ import torch
 from sklearn.model_selection import train_test_split
 
 from . import config as C
-from .feature_utils import (
+from src.utils.feature_utils import (
     build_feature_matrix,
     extract_labels,
     feature_dim,

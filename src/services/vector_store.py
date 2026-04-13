@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from . import config as C
+from src.utils import config as C
 
 log = logging.getLogger(__name__)
 

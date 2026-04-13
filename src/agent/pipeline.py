@@ -40,10 +40,10 @@ from typing import Any, Dict, List, Optional, TypedDict
 
 from openai import OpenAI
 
-from . import config as C
-from .embedder import FraudEmbedder, subgraph_to_text
-from .graph_retriever import GraphRetriever
-from .vector_store import VectorStore, get_vector_store
+from src.utils import config as C
+from src.utils.embedder import FraudEmbedder, subgraph_to_text
+from src.services.graph_retriever import GraphRetriever
+from src.services.vector_store import VectorStore, get_vector_store
 
 log = logging.getLogger(__name__)
 

@@ -46,8 +46,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score, classification_report
 
-from . import config as C
-from .graph_retriever import GraphRetriever
+from src.utils import config as C
+from src.services.graph_retriever import GraphRetriever
 
 log = logging.getLogger(__name__)
 
@@ -264,7 +264,7 @@ class FeedbackStore:
         print("\n  Triggering Phase 2 retraining …")
         try:
             import torch
-            from phase2_gnn.train import run_training
+            from src.services.gnn.train import run_training
 
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             _, _, new_metrics = run_training(

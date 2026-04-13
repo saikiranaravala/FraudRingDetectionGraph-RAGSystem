@@ -27,7 +27,7 @@ except ImportError:
         "Install with: pip install sentence-transformers"
     )
 
-from . import config as C
+from src.utils import config as C
 
 
 # ── Text serialisers ──────────────────────────────────────────────────

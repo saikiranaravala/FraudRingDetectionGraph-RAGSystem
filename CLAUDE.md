@@ -24,6 +24,29 @@ Full product spec: [PRD.md](PRD.md)
 ```
 FraudRingDetectionGraph-RAGSystem/
 │
+├── src/                                  — all application source code
+│   ├── main.py                           — unified CLI entry point
+│   ├── agent/
+│   │   └── pipeline.py                   — LangGraph StateGraph: retrieve → embed → reason
+│   ├── services/
+│   │   ├── graph_retriever.py            — Neo4j subgraph retrieval + HumanReview write-back
+│   │   ├── vector_store.py               — LocalVectorStore (numpy) + PineconeVectorStore
+│   │   ├── feedback.py                   — investigator feedback collection + retraining trigger
+│   │   └── gnn/
+│   │       ├── config.py                 — node types, edge types, feature columns, hyperparams
+│   │       ├── data_loader.py            — CSVs → PyG HeteroData + train/val/test splits
+│   │       ├── model.py                  — FraudGNN: SAGEConv + HGTConv + classifier head
+│   │       ├── train.py                  — training loop, SMOTE/ADASYN, ensemble training
+│   │       ├── explainer.py              — gradient saliency → reasoning trace strings
+│   │       └── scorer.py                 — batch inference + Neo4j score write-back
+│   ├── tools/
+│   │   ├── load_graph.py                 — Neo4j bulk loader (Phase 1)
+│   │   └── nl_query.py                   — NL → Cypher → results → NL summary (Claude)
+│   └── utils/
+│       ├── config.py                     — API keys, model names, prompts, embedding config
+│       ├── embedder.py                   — sentence-transformer embeddings
+│       └── feature_utils.py             — numeric/binary/ordinal feature extraction for GNN
+│
 ├── data/                                 — CSV node and edge files (14,292 nodes · 28,690 edges)
 │   ├── nodes_*.csv                       — 24 node type files
 │   ├── edges_*.csv                       — fixed-type relationship files
@@ -34,37 +57,14 @@ FraudRingDetectionGraph-RAGSystem/
 │   ├── fraud_gnn.pt                      — trained GNN weights
 │   ├── ensemble.pkl                      — XGB + RF + LGBM ensemble
 │   ├── scaler.pkl                        — feature scaler
-│   ├── vector_store.npz                  — local fraud ring embeddings
 │   ├── feedback_labels.json              — investigator label overrides
 │   └── feedback_labels_meta.json         — feedback loop metadata
 │
-├── phase2_gnn/                           — GNN scoring package
-│   ├── config.py                         — node types, edge types, feature columns, hyperparams
-│   ├── feature_utils.py                  — numeric/binary/ordinal feature extraction
-│   ├── data_loader.py                    — CSVs → PyG HeteroData + train/val/test splits
-│   ├── model.py                          — FraudGNN: SAGEConv + HGTConv + classifier head
-│   ├── train.py                          — training loop, SMOTE/ADASYN, ensemble training
-│   ├── explainer.py                      — gradient saliency → reasoning trace strings
-│   └── scorer.py                         — batch inference + Neo4j score write-back
-│
-├── phase3_rag/                           — GraphRAG package
-│   ├── config.py                         — API keys, model name, prompts, embedding config
-│   ├── embedder.py                       — sentence-transformer embeddings (all-MiniLM-L6-v2)
-│   ├── vector_store.py                   — LocalVectorStore (numpy .npz) + PineconeVectorStore
-│   ├── graph_retriever.py                — Neo4j subgraph retrieval + HumanReview write-back
-│   ├── pipeline.py                       — LangGraph StateGraph: retrieve → embed → reason
-│   ├── nl_query.py                       — NL → Cypher → results → NL summary (Claude)
-│   └── feedback.py                       — investigator feedback collection + retraining trigger
-│
-├── load_graph.py                         — Phase 1: load all nodes + edges into Neo4j Aura
-├── run_phase2.py                         — Phase 2 CLI: train | score | explain | evaluate
-├── run_phase3.py                         — Phase 3 CLI: index | explain | query | feedback | retrain | stats
-├── api.py                               — FastAPI web service (Render.com deployment)
+├── api.py                               — FastAPI web service (Render.com)
 ├── build.sh                             — Render build script (CPU torch + requirements.txt)
-├── render.yaml                          — Render service definition
-├── requirements.txt                     — unified production deps (Phase 3 runtime, no PyG)
+├── render.yaml                          — Render service definition (free plan + Pinecone)
+├── requirements.txt                     — production deps (Phase 3 runtime, Pinecone)
 ├── requirements_phase2.txt              — local-only: PyTorch Geometric, XGBoost, LightGBM
-├── requirements_phase3.txt              — reference only (merged into requirements.txt)
 ├── PRD.md                               — full product requirements document
 └── .env                                 — credentials (git-ignored, never commit)
 ```
@@ -130,9 +130,9 @@ pip install -r requirements.txt
 ### Phase 1 — Load graph into Neo4j
 
 ```bash
-python load_graph.py --dry-run          # validate CSVs only, no DB writes
-python load_graph.py                    # load using .env credentials
-python load_graph.py --batch 500        # override batch size
+python src/main.py load-graph --dry-run     # validate CSVs only, no DB writes
+python src/main.py load-graph               # load using .env credentials
+python src/main.py load-graph --batch 500   # override batch size
 ```
 
 Verify in Neo4j Aura Query tab:
@@ -142,42 +142,42 @@ MATCH (n) RETURN labels(n), count(n) ORDER BY count(n) DESC
 MATCH ()-[r]->() RETURN type(r), count(r) ORDER BY count(r) DESC
 ```
 
-### Phase 2 — GNN Scoring
+### Phase 2 — GNN Scoring (local only — not on Render)
 
 ```bash
-python run_phase2.py train                              # train + save to models/
-python run_phase2.py score                              # score all claims + write to Neo4j
-python run_phase2.py score --dry-run                    # score without Neo4j writes
-python run_phase2.py explain --top-n 20 --output traces.json
-python run_phase2.py evaluate                           # re-evaluate saved model
+python src/main.py gnn train                              # train + save to models/
+python src/main.py gnn score                              # score all claims + write to Neo4j
+python src/main.py gnn score --dry-run                    # score without Neo4j writes
+python src/main.py gnn explain --top-n 20 --output traces.json
+python src/main.py gnn evaluate                           # re-evaluate saved model
 ```
 
 ### Phase 3 — GraphRAG Pipeline
 
 ```bash
-# Run once after Phase 1/2 to build vector knowledge base
-python run_phase3.py index
+# Run once after Phase 1/2 to build vector knowledge base (pushes to Pinecone)
+python src/main.py rag index
 
 # Full GraphRAG investigation brief for a claim
-python run_phase3.py explain CLM-521585
-python run_phase3.py explain CLM-521585 --verbose       # also prints raw subgraph
+python src/main.py rag explain CLM-521585
+python src/main.py rag explain CLM-521585 --verbose       # also prints raw subgraph
 
 # Natural language queries against the fraud graph
-python run_phase3.py query                              # interactive REPL
-python run_phase3.py query --question "Which fraud rings have a lawyer in 3+ claims?"
+python src/main.py rag query                              # interactive REPL
+python src/main.py rag query --question "Which fraud rings have a lawyer in 3+ claims?"
 
 # Record investigator decisions (writes HumanReview node to Neo4j)
-python run_phase3.py feedback CLM-521585 --decision Approve   --investigator INV-001
-python run_phase3.py feedback CLM-521585 --decision Dismiss   --investigator INV-001 --feedback FP
-python run_phase3.py feedback CLM-521585 --decision Escalate  --investigator INV-001 --feedback FN
+python src/main.py rag feedback CLM-521585 --decision Approve   --investigator INV-001
+python src/main.py rag feedback CLM-521585 --decision Dismiss   --investigator INV-001 --feedback FP
+python src/main.py rag feedback CLM-521585 --decision Escalate  --investigator INV-001 --feedback FN
 
 # Feedback-loop retraining
-python run_phase3.py retrain                            # retrain if ≥ 20 new reviews
-python run_phase3.py retrain --evaluate-only            # F1 metrics, no retraining
-python run_phase3.py retrain --min-reviews 10           # lower threshold for testing
+python src/main.py rag retrain                            # retrain if ≥ 20 new reviews
+python src/main.py rag retrain --evaluate-only            # F1 metrics, no retraining
+python src/main.py rag retrain --min-reviews 10           # lower threshold for testing
 
 # Stats
-python run_phase3.py stats
+python src/main.py rag stats
 ```
 
 ---

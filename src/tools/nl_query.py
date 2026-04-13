@@ -30,8 +30,8 @@ from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
 
-from . import config as C
-from .graph_retriever import GraphRetriever
+from src.utils import config as C
+from src.services.graph_retriever import GraphRetriever
 
 log = logging.getLogger(__name__)
 
