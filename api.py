@@ -67,9 +67,27 @@ def _get_pipeline_deps():
         from src.utils.embedder import FraudEmbedder
         from openai import OpenAI
         from src.utils import config as C
+        import os
+
         _vector_store = get_vector_store(load_existing=True)
         _embedder     = FraudEmbedder()
-        _llm_client   = OpenAI(api_key=C.OPENROUTER_API_KEY, base_url=C.OPENROUTER_BASE_URL)
+
+        # Pass Google API key via header if using Gemma (for user's own quota)
+        headers = {}
+        google_key = os.getenv("GOOGLE_API_KEY")
+        if "gemma" in C.LLM_MODEL.lower() and google_key:
+            log.info("Using Gemma with user's Google API key")
+            headers["HTTP-Referer"] = "https://fraud-ring-detection.local"
+            headers["X-Title"] = "Fraud Ring Detection"
+            # OpenRouter uses x-api-key header for provider keys
+            headers["x-api-key"] = google_key
+
+        _llm_client = OpenAI(
+            api_key=C.OPENROUTER_API_KEY,
+            base_url=C.OPENROUTER_BASE_URL,
+            default_headers=headers if headers else None
+        )
+        log.info("LLM client initialized (model: %s)", C.LLM_MODEL)
     return _vector_store, _embedder, _llm_client
 
 

@@ -1,13 +1,13 @@
 """
 Phase 3 configuration: API keys, model names, vector store settings,
-graph schema for NL queries, and Claude system prompts.
+graph schema for NL queries, and LLM system prompts.
 
 Add to .env:
   OPENROUTER_API_KEY=sk-or-...
-  OPENROUTER_MODEL=anthropic/claude-sonnet-4-5   # optional, see openrouter.ai/models
-  VECTOR_STORE_BACKEND=local                      # "local" or "pinecone"
-  PINECONE_API_KEY=...                            # optional, only if backend=pinecone
-  PINECONE_INDEX=fraud-rings                      # optional
+  OPENROUTER_MODEL=google/gemma-4-31b-it:free   # free model, or anthropic/claude-sonnet-4-5
+  VECTOR_STORE_BACKEND=pinecone                  # "local" or "pinecone"
+  PINECONE_API_KEY=...                           # required if backend=pinecone
+  PINECONE_INDEX=fraud-rings                     # optional
 """
 
 import os
@@ -24,10 +24,15 @@ VECTOR_STORE_PATH = os.path.join(MODELS_DIR, "vector_store.npz")
 FEEDBACK_PATH     = os.path.join(MODELS_DIR, "feedback_labels.json")
 
 # ── OpenRouter / LLM ──────────────────────────────────────────────────
+# Default to google/gemma-4-31b-it:free (free on OpenRouter)
+# For better quality, use anthropic/claude-sonnet-4-5 (paid, ~$3–15/M tokens)
 OPENROUTER_API_KEY  = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-CLAUDE_MODEL        = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4-5")
+LLM_MODEL           = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
 MAX_TOKENS          = 2048
+
+# Backward-compat alias
+CLAUDE_MODEL        = LLM_MODEL
 
 # Keep backward-compat alias used in feedback.py EnvironmentError check
 ANTHROPIC_API_KEY   = OPENROUTER_API_KEY
@@ -104,52 +109,58 @@ RELATIONSHIPS
 """
 
 # ── System prompts ───────────────────────────────────────────────────
-REASONING_SYSTEM_PROMPT = f"""You are an expert insurance fraud investigator AI assistant. \
-You analyze insurance claims for fraud ring patterns and generate structured investigation briefs.
+REASONING_SYSTEM_PROMPT = f"""You are an insurance fraud investigator. Analyze the claim and provide a brief investigation summary.
 
-Your reasoning must be:
-- Evidence-based: cite specific data points from the subgraph context
-- Comparative: reference analogous historical fraud rings when available
-- Actionable: recommend a specific investigator action
-- Compliant: flag any Mandatory Override criteria (OVR-001 through OVR-008)
+TASK: Analyze the subgraph data below. Look for fraud signals. Compare to historical rings if provided.
 
-Mandatory Override criteria to check:
-- OVR-001: Ring suspicion score ≥ 0.90
-- OVR-002: Projected ring exposure > $75K
-- OVR-003: Same attorney/witness/shop across jurisdictions
-- OVR-005: Licensed attorney is the primary connecting edge
-- OVR-006: Vulnerable claimant (elderly, bereavement, language barrier)
-- OVR-008: Any node has a prior SIU referral
+MANDATORY CHECKS (always evaluate these):
+1. Is ring_suspicion_score >= 0.90? → OVR-001
+2. Is total_claim_amount > $75,000? → OVR-002
+3. Do lawyer/witness/shop appear across multiple states? → OVR-003
+4. Is a licensed attorney the main connection? → OVR-005
+5. Is claimant elderly (>65) or vulnerable? → OVR-006
+6. Do any entities have prior SIU referrals? → OVR-008
 
-Graph schema for reference:
+REQUIRED OUTPUT FORMAT:
+1. FRAUD SIGNALS DETECTED: List specific red flags with values (e.g., "staged_accident_flag=true", "shared_bank_flag=true")
+2. RING PATTERN ANALYSIS: Describe connections between entities (customer, lawyer, shop, witnesses)
+3. ANALOGOUS HISTORICAL CASES: If historical rings provided, compare patterns
+4. MANDATORY OVERRIDE STATUS: List triggered OVR codes (e.g., "OVR-001, OVR-003")
+5. RECOMMENDED ACTION: One sentence on next investigator step
+
+Graph schema:
 {GRAPH_SCHEMA}
 
-Always structure your response with these sections:
-1. FRAUD SIGNALS DETECTED
-2. RING PATTERN ANALYSIS
-3. ANALOGOUS HISTORICAL CASES (if available)
-4. MANDATORY OVERRIDE STATUS
-5. RECOMMENDED ACTION
+Be specific. Use exact values from the data. Keep response under 400 words.
 """
 
-NL_QUERY_SYSTEM_PROMPT = f"""You are a Neo4j Cypher expert for an insurance fraud detection system.
-Convert natural language questions into valid Cypher queries.
+NL_QUERY_SYSTEM_PROMPT = f"""You are a Cypher query writer for Neo4j fraud graph.
+Write ONLY a valid Cypher query that answers the question. No explanation.
 
+IMPORTANT:
+1. Return only the query text, no markdown or explanation
+2. LIMIT 25 unless user says otherwise
+3. Use OPTIONAL MATCH for relationships that may not exist
+4. Include property names in RETURN clause
+5. For fraud queries, filter on: fraud_reported, ring_member_flag, fraud_flag, ring_score, priority
+
+Graph nodes and relationships:
 {GRAPH_SCHEMA}
+
+Example formats:
+- "MATCH (c:Claim) WHERE c.fraud_reported = true RETURN c.claim_id, c.final_suspicion_score LIMIT 10"
+- "MATCH (r:FraudRing)-[:RING_CONTAINS_CLAIM]->(c:Claim) WHERE r.ring_score >= 0.9 RETURN r.ring_id, count(c) LIMIT 5"
+
+Write the Cypher query now.
+"""
+
+RESULT_FORMATTER_SYSTEM_PROMPT = """Summarize Neo4j query results for a fraud investigator.
 
 Rules:
-- Use OPTIONAL MATCH for relationships that may not exist
-- Always LIMIT results to 25 unless the user specifies otherwise
-- Return meaningful property names, not raw node objects
-- Use parameterized queries when possible
-- For fraud-related queries, prefer filtering on indexed properties:
-  Claim.fraud_reported, Claim.ring_member_flag, Customer.fraud_flag,
-  FraudRing.status, InvestigationCase.priority
+1. Be factual — use exact values from results
+2. Use bullet points for lists
+3. Bold fraud-related fields (e.g., **fraud_flag**, **ring_score**)
+4. Keep under 300 words
+5. Highlight any high-risk patterns (ring_score >= 0.9, multiple claims, shared attributes)
 
-Return ONLY the Cypher query. No explanation, no markdown fences.
-"""
-
-RESULT_FORMATTER_SYSTEM_PROMPT = """You are an insurance fraud investigation assistant. \
-Format Neo4j query results into clear, concise natural language summaries for investigators.
-Be factual. Use bullet points for lists. Highlight fraud signals in bold.
-Keep responses under 300 words."""
+Summarize the results now."""
