@@ -10,8 +10,9 @@ langgraph>=0.2.28
 langchain-core>=0.3.0
 
 # ── Embeddings ────────────────────────────────────────────────────────
-# torch is installed via build.sh (CPU-only build) to avoid the 2 GB CUDA wheel
-sentence-transformers>=3.0.0
+# fastembed uses ONNX Runtime (no PyTorch) — ~100 MB RAM vs ~380 MB for sentence-transformers+torch
+# Compatible with Render free plan (512 MB). Model: BAAI/bge-small-en-v1.5 (384-dim)
+fastembed>=0.3.0
 
 # ── Vector store ──────────────────────────────────────────────────────
 scikit-learn>=1.4.0        # cosine_similarity (local backend fallback)

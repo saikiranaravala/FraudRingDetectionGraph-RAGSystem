@@ -22,11 +22,11 @@ st.set_page_config(
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-def _api(method: str, path: str, **kwargs):
+def _api(method: str, path: str, timeout: int = 60, **kwargs):
     """Call the backend API, return (data_dict | None, error_str | None)."""
     url = st.session_state.api_url.rstrip("/") + path
     try:
-        resp = getattr(requests, method)(url, timeout=60, **kwargs)
+        resp = getattr(requests, method)(url, timeout=timeout, **kwargs)
         if resp.status_code == 200:
             return resp.json(), None
         detail = resp.json().get("detail", resp.text) if resp.content else resp.text
@@ -34,7 +34,11 @@ def _api(method: str, path: str, **kwargs):
     except requests.exceptions.ConnectionError:
         return None, "Cannot reach the API. Check the URL and ensure the service is running."
     except requests.exceptions.Timeout:
-        return None, "Request timed out (60 s). The Render free plan may be cold-starting — try again."
+        return None, (
+            f"Request timed out ({timeout} s). "
+            "The Render free plan may be cold-starting — try again. "
+            "NL queries make two LLM calls and may need up to 2 minutes."
+        )
     except Exception as exc:
         return None, str(exc)
 
@@ -140,8 +144,8 @@ with tab_invest:
         if not claim_id.strip():
             st.warning("Enter a claim ID.")
         else:
-            with st.spinner(f"Running GraphRAG pipeline for {claim_id} ..."):
-                data, err = _api("post", f"/explain/{claim_id.strip()}")
+            with st.spinner(f"Running GraphRAG pipeline for {claim_id} — this may take 60–90 s (Neo4j + Pinecone + Claude) ..."):
+                data, err = _api("post", f"/explain/{claim_id.strip()}", timeout=120)
 
             if err:
                 st.error(err)
@@ -240,8 +244,8 @@ with tab_query:
         if not question.strip():
             st.warning("Enter a question.")
         else:
-            with st.spinner("Generating Cypher and querying Neo4j ..."):
-                data, err = _api("post", "/query", json={"question": question.strip()})
+            with st.spinner("Generating Cypher and querying Neo4j — two LLM calls, may take up to 2 min ..."):
+                data, err = _api("post", "/query", json={"question": question.strip()}, timeout=120)
 
             if err:
                 st.error(err)

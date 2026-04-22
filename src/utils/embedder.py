@@ -2,7 +2,12 @@
 Text embedding for fraud ring and claim context.
 
 Converts structured Neo4j property dicts into descriptive text strings
-then embeds them using sentence-transformers (all-MiniLM-L6-v2, 384-dim).
+then embeds them using fastembed (ONNX-based, no PyTorch required).
+
+fastembed uses ONNX Runtime instead of PyTorch — ~100 MB RAM vs ~380 MB
+for sentence-transformers+torch. Required for Render free plan (512 MB).
+
+Default model: BAAI/bge-small-en-v1.5 (384-dim, same as paraphrase-MiniLM-L3-v2)
 
 Used to populate the vector knowledge base (FraudRing nodes) and to
 embed a new ring/claim at query time for analogous-ring retrieval.
@@ -18,13 +23,13 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 try:
-    from sentence_transformers import SentenceTransformer
-    HAS_ST = True
+    from fastembed import TextEmbedding
+    HAS_FE = True
 except ImportError:
-    HAS_ST = False
+    HAS_FE = False
     log.warning(
-        "sentence-transformers not installed. "
-        "Install with: pip install sentence-transformers"
+        "fastembed not installed. "
+        "Install with: pip install fastembed"
     )
 
 from src.utils import config as C
@@ -216,11 +221,14 @@ def subgraph_to_text(subgraph: Dict[str, Any]) -> str:
 # ── Embedder class ────────────────────────────────────────────────────
 class FraudEmbedder:
     """
-    Embeds fraud ring and claim text using sentence-transformers.
+    Embeds fraud ring and claim text using fastembed (ONNX Runtime).
 
-    The model is loaded once and reused. If sentence-transformers is not
-    available, falls back to a deterministic hash-based pseudo-embedding
-    (useful for dry-run / testing without GPU/model download).
+    fastembed avoids PyTorch entirely — uses onnxruntime instead,
+    cutting RAM from ~380 MB to ~100 MB. Compatible with Render free plan.
+
+    Default model: BAAI/bge-small-en-v1.5 (384-dim)
+    Falls back to a deterministic hash-based pseudo-embedding if fastembed
+    is not installed (useful for dry-run / testing).
     """
 
     def __init__(self, model_name: str = C.EMBEDDING_MODEL):
@@ -228,20 +236,13 @@ class FraudEmbedder:
         self._model_name = model_name
         self._dim = C.EMBEDDING_DIM
 
-        if HAS_ST:
+        if HAS_FE:
             try:
-                log.info("Loading sentence-transformer model: %s", model_name)
-                self._model = SentenceTransformer(model_name)
-                # get_embedding_dimension() is the new name (≥3.x); fall back to old name
-                get_dim = getattr(
-                    self._model,
-                    "get_embedding_dimension",
-                    None,
-                ) or getattr(self._model, "get_sentence_embedding_dimension", None)
-                self._dim = get_dim() if get_dim else C.EMBEDDING_DIM
-                log.info("Embedding dim: %d", self._dim)
+                log.info("Loading fastembed model: %s", model_name)
+                self._model = TextEmbedding(model_name=model_name)
+                log.info("fastembed model loaded (ONNX, no PyTorch required)")
             except Exception as e:
-                log.warning("Could not load SentenceTransformer: %s. Using fallback.", e)
+                log.warning("Could not load fastembed model: %s. Using fallback.", e)
 
     @property
     def dim(self) -> int:
@@ -250,20 +251,15 @@ class FraudEmbedder:
     def embed(self, text: str) -> np.ndarray:
         """Embed a single text string → float32 array of shape (dim,)."""
         if self._model is not None:
-            vec = self._model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
-            return vec.astype(np.float32)
+            vecs = list(self._model.embed([text]))
+            return np.array(vecs[0], dtype=np.float32)
         return self._fallback_embed(text)
 
     def embed_batch(self, texts: List[str]) -> np.ndarray:
         """Embed a list of texts → float32 array of shape (N, dim)."""
         if self._model is not None:
-            vecs = self._model.encode(
-                texts,
-                convert_to_numpy=True,
-                normalize_embeddings=True,
-                show_progress_bar=len(texts) > 10,
-            )
-            return vecs.astype(np.float32)
+            vecs = list(self._model.embed(texts))
+            return np.array(vecs, dtype=np.float32)
         return np.vstack([self._fallback_embed(t) for t in texts])
 
     def embed_ring(self, ring_props: Dict[str, Any]) -> np.ndarray:

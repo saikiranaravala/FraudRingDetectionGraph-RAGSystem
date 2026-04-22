@@ -33,9 +33,12 @@ MAX_TOKENS          = 2048
 ANTHROPIC_API_KEY   = OPENROUTER_API_KEY
 
 # ── Embeddings ────────────────────────────────────────────────────────
-# paraphrase-MiniLM-L3-v2: 17 MB weights, 384-dim output — fits Render free plan (512 MB)
-# all-MiniLM-L6-v2:        90 MB weights, 384-dim output — better quality, needs Standard plan
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "paraphrase-MiniLM-L3-v2")
+# fastembed models (ONNX — no PyTorch, ~100 MB RAM total):
+#   BAAI/bge-small-en-v1.5:  384-dim, ~25 MB, fast — DEFAULT
+#   BAAI/bge-base-en-v1.5:   768-dim, ~110 MB, higher quality
+# sentence-transformer models (PyTorch — ~380 MB RAM, too large for Render free):
+#   paraphrase-MiniLM-L3-v2: 384-dim (legacy, replaced by fastembed)
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 EMBEDDING_DIM   = 384
 
 # ── Vector store ──────────────────────────────────────────────────────
