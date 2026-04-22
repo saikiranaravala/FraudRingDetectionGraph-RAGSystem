@@ -390,11 +390,12 @@ manual_override_flag = True if any([
 | **Streaming Ingest** | Amazon Kinesis + Neo4j Kafka Connector | Sub-second claim-to-graph latency. Enables pre-payment interception (Phase 4) |
 | **Batch ETL** | AWS Glue + EMR | Scalable bulk historical load. 3+ years of claims enrichment, vendor registry joins, court record cross-references |
 | **Orchestration** | LangGraph | Multi-step agentic RAG pipeline: graph traversal → vector retrieval → LLM reasoning in a single auditable chain |
+| **Embeddings** | fastembed (ONNX) + BAAI/bge-small-en-v1.5 | 384-dim, no PyTorch required. ~100 MB RAM vs. ~380 MB (sentence-transformers). Fits Render free plan. |
 | **Vector KB** | Pinecone | Fast cosine similarity retrieval for analogous historical ring cases. 384-dim index, free starter tier. Persists across Render deploys. |
-| **LLM Reasoning** | Claude via OpenRouter (openai-compatible API) | Explanation generation, NL querying, reasoning trace authoring. Investigators ask the graph questions in plain language via the Streamlit UI. |
-| **Oversampling** | SMOTE + ADASYN | Class imbalance correction at training time only. VAE/GAN synthetic minority generation for rare ring patterns |
+| **LLM Reasoning** | Claude or Gemma via OpenRouter (openai-compatible API) | Claude: best quality, pay-per-token. Gemma: free (with Google API key). Explanation generation, NL querying, reasoning trace. Investigators ask graph questions in plain English. |
+| **Oversampling** | SMOTE + ADASYN | Class imbalance correction at training time only. Never applied to val/test/inference. |
 | **Frontend** | Streamlit | 4-tab investigator UI: Investigate / Query / Feedback / Stats. Deployed on Streamlit Community Cloud (free). |
-| **Web API** | FastAPI + uvicorn | REST API wrapping the GraphRAG pipeline. Deployed on Render.com (free plan, 512 MB RAM). |
+| **Web API** | FastAPI + uvicorn | REST API wrapping the GraphRAG pipeline. Deployed on Render.com (free plan, 512 MB RAM, fastembed fits). |
 | **ML Serving** | Amazon SageMaker | Model hosting, weekly retraining pipeline, A/B testing between model versions (Phase 4) |
 
 ---
@@ -493,13 +494,26 @@ If the system's outputs ever inform an adverse action, the investigator's **docu
 **Goal:** Natural language querying, analogous ring retrieval, and feedback loop live.
 
 - [x] LangGraph StateGraph pipeline: retrieve_subgraph → find_analogous_rings → generate_reasoning
-- [x] Pinecone vector knowledge base populated (384-dim, 20 FraudRing embeddings)
+- [x] Pinecone vector knowledge base populated (384-dim, 20 FraudRing embeddings, fastembed-indexed)
 - [x] Natural language querying live via NL → Cypher → Neo4j → NL summary
-- [x] Claude investigation briefs generated via OpenRouter (openai-compatible API)
+- [x] LLM reasoning via OpenRouter: Claude (paid) or Gemma (free with Google key)
 - [x] Feedback loop: Approve / Dismiss / Escalate → HumanReview node → retraining trigger
-- [x] FastAPI REST API deployed on Render.com (free plan)
-- [x] Streamlit investigator UI deployed on Streamlit Community Cloud (free)
 - [x] Unified CLI: `python src/main.py rag index | explain | query | feedback | retrain | stats`
+
+---
+
+### Phase 3b — Production Deployment & Optimization (Complete)
+
+**Goal:** Streamlined frontend, robust backend on constrained infrastructure, cost-optimized LLM routing.
+
+- [x] Replaced PyTorch sentence-transformers with fastembed (ONNX): 100 MB RAM vs. 380 MB
+- [x] FastAPI REST API deployed on Render.com (free plan, 512 MB RAM, fits with fastembed)
+- [x] Streamlit investigator UI deployed on Streamlit Community Cloud (free)
+- [x] 4-tab investigator workflow: Investigate Claim / Graph Query / Record Feedback / Stats & History
+- [x] Support for both Claude (best quality, paid) and Gemma (free, with Google API key)
+- [x] System prompts optimized for both LLM models (explicit structure, no ambiguity)
+- [x] Increased API timeouts for slow endpoints (120s for GraphRAG + NL query)
+- [x] All 12 architecture diagrams created in `diagrams/` (Mermaid markdown)
 
 ---
 

@@ -45,7 +45,7 @@ FraudRingDetectionGraph-RAGSystem/
 │   │   └── nl_query.py                   — NL → Cypher → results → NL summary (Claude)
 │   └── utils/
 │       ├── config.py                     — API keys, model names, prompts, embedding config
-│       ├── embedder.py                   — sentence-transformer embeddings
+│       ├── embedder.py                   — fastembed (ONNX) embeddings, no PyTorch
 │       └── feature_utils.py              — numeric/binary/ordinal feature extraction for GNN
 │
 ├── ui/                                   — Streamlit frontend (deploy to Streamlit Cloud)
@@ -104,7 +104,11 @@ BATCH_SIZE=200
 
 # ── OpenRouter (LLM) ───────────────────────────────────────────
 OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=anthropic/claude-sonnet-4-5   # optional, default shown
+OPENROUTER_MODEL=anthropic/claude-sonnet-4-5   # or google/gemma-4-31b-it:free
+GOOGLE_API_KEY=...                             # optional, needed for Gemma
+
+# ── Embeddings ──────────────────────────────────────────────────
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5         # fastembed model (384-dim, ONNX)
 
 # ── Vector store ───────────────────────────────────────────────
 VECTOR_STORE_BACKEND=pinecone     # "local" or "pinecone"
@@ -125,13 +129,15 @@ api_url = "https://your-service.onrender.com"
 ### Installation
 
 ```bash
-# Phase 3 API runtime (FastAPI, LangGraph, embeddings, Neo4j, Pinecone)
+# Phase 3 API runtime (FastAPI, LangGraph, fastembed, Neo4j, Pinecone)
+# fastembed uses ONNX Runtime instead of PyTorch — ~100 MB RAM vs ~380 MB
 pip install -r requirements.txt
 
 # Streamlit frontend (lightweight — streamlit, requests, pandas only)
 pip install -r ui/requirements.txt
 
 # Phase 2 GNN training (local only — not needed on Render)
+# PyTorch is NOT installed on Render; train locally then upload models
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install torch-geometric
 pip install -r requirements_phase2.txt
@@ -216,9 +222,9 @@ streamlit run ui/streamlit_app.py
 | File | Purpose |
 | ---- | ------- |
 | [api.py](api.py) | FastAPI web service wrapping the Phase 3 pipeline |
-| [build.sh](build.sh) | Installs CPU torch then requirements.txt |
-| [render.yaml](render.yaml) | Service definition — free plan, Pinecone backend |
-| [requirements.txt](requirements.txt) | Unified production dependencies |
+| [build.sh](build.sh) | Installs requirements.txt (no PyTorch — uses fastembed ONNX) |
+| [render.yaml](render.yaml) | Service definition — free plan, fastembed + Pinecone |
+| [requirements.txt](requirements.txt) | Production dependencies (fastembed>=0.3.0, no torch) |
 
 **Steps:**
 
@@ -257,13 +263,14 @@ The index persists in Pinecone cloud — survives all Render deploys and cold st
 
 | Component | RAM |
 | --------- | --- |
-| PyTorch CPU runtime | ~200 MB |
-| `paraphrase-MiniLM-L3-v2` weights | ~17 MB |
-| FastAPI + all other libs | ~80 MB |
-| **Total** | **~300 MB — fits 512 MB free limit** |
+| onnxruntime (fastembed) | ~60 MB |
+| `BAAI/bge-small-en-v1.5` weights | ~30 MB |
+| FastAPI + LangGraph + Neo4j driver | ~80 MB |
+| Pinecone client + other libs | ~30 MB |
+| **Total** | **~200 MB — fits 512 MB free limit** |
 
-> Switch to `all-MiniLM-L6-v2` (90 MB, higher quality) by setting `EMBEDDING_MODEL=all-MiniLM-L6-v2`
-> and upgrading to the Standard plan. Both models output 384-dim — Pinecone index unchanged.
+> Previously used PyTorch + sentence-transformers (~380 MB, caused OOM). Switched to fastembed (ONNX)
+> for 3x RAM savings. Both models output 384-dim — Pinecone index compatible.
 
 ### Phase 2 GNN on Render
 
@@ -533,7 +540,7 @@ trigger_retrain()  (requires >= 20 labelled reviews)
 
 ### LLM call sites
 
-All Claude calls use the `openai` Python package pointed at OpenRouter:
+All LLM calls use the `openai` Python package pointed at OpenRouter:
 
 | File | System prompt | Purpose |
 | ---- | ------------- | ------- |
@@ -541,7 +548,11 @@ All Claude calls use the `openai` Python package pointed at OpenRouter:
 | `src/tools/nl_query.py` | `NL_QUERY_SYSTEM_PROMPT` | NL → Cypher conversion |
 | `src/tools/nl_query.py` | `RESULT_FORMATTER_SYSTEM_PROMPT` | Result summarisation |
 
-Model: configurable via `OPENROUTER_MODEL` env var. Default: `anthropic/claude-sonnet-4-5`.
+Model: configurable via `OPENROUTER_MODEL` env var.
+- Default: `anthropic/claude-sonnet-4-5` (paid, ~$3–15/M tokens, best quality)
+- Alternative: `google/gemma-4-31b-it:free` (free, requires Google API key in OpenRouter integrations)
+
+System prompts are optimized for both models (explicit structure, no ambiguity).
 
 ### Vector store backends
 

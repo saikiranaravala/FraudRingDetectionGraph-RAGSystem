@@ -24,9 +24,10 @@ Layer 4 — HITL Review                     Investigator decisions feed back int
 
 | Phase | Scope | Status |
 | ------- | ------- | -------- |
-| Phase 1 — Graph Load | Neo4j graph + rule engine + HITL queue | Complete |
-| Phase 2 — GNN Scoring | GraphSAGE + HINormer + XGB/RF/LGBM ensemble | Complete |
-| Phase 3 — GraphRAG | LangGraph pipeline + NL query + feedback loop | Complete |
+| Phase 1 — Graph Load | Neo4j graph + rule engine + HITL queue | ✓ Complete |
+| Phase 2 — GNN Scoring | GraphSAGE + HINormer + XGB/RF/LGBM ensemble | ✓ Complete |
+| Phase 3 — GraphRAG | LangGraph pipeline + NL query + feedback loop | ✓ Complete |
+| Phase 3b — Frontend | Streamlit UI + FastAPI on Render | ✓ Complete |
 | Phase 4 — Streaming | Real-time Kinesis ingest + cross-carrier exchange | Not started |
 
 **Graph scale:** 14,292 nodes · 28,690 edges · 941 properties · 24 node types · 28 edge types
@@ -57,7 +58,7 @@ FraudRingDetectionGraph-RAGSystem/
 │   │   └── nl_query.py                NL -> Cypher -> results -> NL summary
 │   └── utils/
 │       ├── config.py                  API keys, model names, prompts, embedding config
-│       ├── embedder.py                Sentence-transformer ring/claim embeddings
+│       ├── embedder.py                fastembed (ONNX) ring/claim embeddings
 │       └── feature_utils.py           Feature extraction for GNN
 │
 ├── ui/                                Streamlit frontend (deploy to Streamlit Cloud)
@@ -90,10 +91,11 @@ FraudRingDetectionGraph-RAGSystem/
 | Service | Purpose | Free tier |
 | ------- | ------- | --------- |
 | Neo4j Aura | Graph database | Free (200K nodes) |
-| OpenRouter | LLM API (Claude) | Pay-per-token |
+| OpenRouter | LLM API | Claude: pay-per-token · Gemma: free (with Google key) |
 | Pinecone | Vector store | Free (1 index, 100K vectors) |
-| Render.com | API hosting | Free (512 MB RAM, spins down) |
+| Render.com | API hosting | Free (512 MB RAM, fastembed fits) |
 | Streamlit Community Cloud | UI hosting | Free |
+| Google AI Studio | Gemma API (optional) | Free tier available |
 
 ---
 
