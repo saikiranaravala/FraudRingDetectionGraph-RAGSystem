@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys; lines=sys.stdin.readlines\\(\\); cols=lines[0].strip\\(\\).split\\(','\\); print\\(f'COLUMNS \\({len\\(cols\\)}\\):\\\\n'+'\\\\n'.join\\(cols\\)\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(mkdir -p src/agent src/services/gnn src/tools src/utils)",
+      "Bash(touch src/__init__.py src/agent/__init__.py src/services/__init__.py src/services/gnn/__init__.py src/tools/__init__.py src/utils/__init__.py)",
+      "Bash(venv/Scripts/python -m pip install \"fastembed>=0.3.0\")",
+      "Bash(venv/Scripts/python -m ensurepip --upgrade)",
+      "Bash(venv/Scripts/python -m pip install --upgrade pip)",
+      "Bash(venv/Scripts/pip3 install:*)"
+    ]
+  }
+}
