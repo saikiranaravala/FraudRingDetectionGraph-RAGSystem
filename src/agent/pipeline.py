@@ -146,6 +146,14 @@ def _detect_overrides(claim_props: Dict, subgraph: Dict) -> List[str]:
 
 # ── Node functions ────────────────────────────────────────────────────
 def make_retrieve_node(retriever: GraphRetriever):
+    """Factory function to create the retrieve_subgraph node for LangGraph.
+
+    Args:
+        retriever: GraphRetriever instance for Neo4j queries
+
+    Returns:
+        retrieve_subgraph: Node function that fetches claim's subgraph from Neo4j
+    """
     def retrieve_subgraph(state: PipelineState) -> PipelineState:
         claim_id = state["claim_id"]
         try:
@@ -172,6 +180,15 @@ def make_retrieve_node(retriever: GraphRetriever):
 
 
 def make_search_node(embedder: FraudEmbedder, vector_store: VectorStore):
+    """Factory function to create the find_analogous_rings node for LangGraph.
+
+    Args:
+        embedder: FraudEmbedder instance for embeddings
+        vector_store: VectorStore instance (Pinecone or local)
+
+    Returns:
+        find_analogous_rings: Node function that searches for similar historical rings
+    """
     def find_analogous_rings(state: PipelineState) -> PipelineState:
         subgraph = state.get("subgraph", {})
         if not subgraph:
@@ -187,6 +204,14 @@ def make_search_node(embedder: FraudEmbedder, vector_store: VectorStore):
 
 
 def make_reasoning_node(llm_client: OpenAI):
+    """Factory function to create the generate_reasoning node for LangGraph.
+
+    Args:
+        llm_client: OpenAI client configured for OpenRouter
+
+    Returns:
+        generate_reasoning: Node function that calls Claude for investigation brief
+    """
     def generate_reasoning(state: PipelineState) -> PipelineState:
         claim_id      = state["claim_id"]
         fraud_score   = state.get("fraud_score", 0.0)

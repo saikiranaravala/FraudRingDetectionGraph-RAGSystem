@@ -1,3 +1,13 @@
+"""
+OpenRouter API Key Validation Test
+
+Quick test script to verify OpenRouter API credentials and LLM model connectivity.
+Used during development to validate Gemma or Claude configuration before full deployment.
+
+Usage:
+    python testOpenRouterKey.py
+"""
+
 from dotenv import load_dotenv
 load_dotenv()
 from openai import OpenAI

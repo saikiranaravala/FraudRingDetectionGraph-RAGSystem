@@ -10,6 +10,16 @@
       "Bash(venv/Scripts/python -m ensurepip --upgrade)",
       "Bash(venv/Scripts/python -m pip install --upgrade pip)",
       "Bash(venv/Scripts/pip3 install:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./ui/secrets.*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

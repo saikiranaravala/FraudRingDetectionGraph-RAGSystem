@@ -162,6 +162,11 @@ class StatsResponse(BaseModel):
 
 @app.get("/health")
 def health():
+    """Health check endpoint. Returns status OK if API is running.
+
+    Returns:
+        dict: Status dictionary with "status": "ok"
+    """
     return {"status": "ok"}
 
 

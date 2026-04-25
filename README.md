@@ -100,6 +100,64 @@ FraudRingDetectionGraph-RAGSystem/
 
 ---
 
+## Setup
+
+### System Requirements
+
+- **Python:** 3.11 or newer
+- **Virtual environment:** Python venv recommended
+- **Git:** For cloning the repository
+- **Memory:** 512 MB minimum (with fastembed ONNX embeddings, no PyTorch)
+- **Network:** Internet access for Neo4j Aura, OpenRouter, Pinecone
+
+### External Accounts (Free Tier Available)
+
+1. **Neo4j Aura** — Graph database (Free: 200K nodes limit)
+2. **OpenRouter** — LLM API (Free: Gemma, paid: Claude)
+3. **Pinecone** — Vector search (Free: 1 index, 100K vectors)
+4. **Render.com** — API hosting (Free: 512 MB RAM)
+5. **Streamlit Cloud** — UI hosting (Free)
+6. **LangSmith** — Observability (Free: 7-day traces, unlimited)
+
+---
+
+## Installation
+
+### Quick Start
+
+```bash
+# 1. Clone repository
+git clone https://github.com/saikiranaravala/FraudRingDetectionGraph-RAGSystem.git
+cd FraudRingDetectionGraph-RAGSystem
+
+# 2. Create and activate virtual environment
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# Mac / Linux
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment
+cp .env.example .env  # (if available)
+# Edit .env with your API keys and credentials
+
+# 5. Start API (optional, for local testing)
+uvicorn api:app --reload
+
+# 6. Start Streamlit UI (optional, in another terminal)
+streamlit run ui/streamlit_app.py
+```
+
+### Detailed Installation Steps
+
+See **Local Development** section below for comprehensive step-by-step instructions including Pinecone index creation, graph data loading, and GNN model training.
+
+---
+
 ## Local Development
 
 ### Prerequisites
