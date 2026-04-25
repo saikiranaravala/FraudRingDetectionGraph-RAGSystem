@@ -96,6 +96,7 @@ FraudRingDetectionGraph-RAGSystem/
 | Render.com | API hosting | Free (512 MB RAM, fastembed fits) |
 | Streamlit Community Cloud | UI hosting | Free |
 | Google AI Studio | Gemma API (optional) | Free tier available |
+| LangSmith | LLM observability & tracing (optional) | Free (7-day retention, unlimited traces) |
 
 ---
 
@@ -154,10 +155,18 @@ VECTOR_STORE_BACKEND=pinecone
 PINECONE_API_KEY=<your-pinecone-key>
 PINECONE_INDEX=fraud-rings
 
+# LangSmith monitoring (optional — for debugging and observability)
+LANGCHAIN_TRACING_V2=true
+LANGSMITH_API_KEY=lsv2_pt_...
+LANGCHAIN_PROJECT=FraudRingDetectionGraph-RAG
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+
 # Data
 DATA_DIR=./data
 BATCH_SIZE=200
 ```
+
+> **LangSmith setup (optional):** Get a free API key at [smith.langchain.com](https://smith.langchain.com). When enabled, all LangGraph node executions and LLM calls are traced and visible in the LangSmith dashboard for debugging and performance monitoring.
 
 ### Step 4 — Create Pinecone index (one-time)
 

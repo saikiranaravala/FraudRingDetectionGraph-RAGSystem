@@ -8,6 +8,7 @@ openai>=1.30.0
 # ── Agentic pipeline ─────────────────────────────────────────────────
 langgraph>=0.2.28
 langchain-core>=0.3.0
+langsmith>=0.1.0          # LangSmith monitoring and tracing for LLM applications
 
 # ── Embeddings ────────────────────────────────────────────────────────
 # fastembed uses ONNX Runtime (no PyTorch) — ~100 MB RAM vs ~380 MB for sentence-transformers+torch

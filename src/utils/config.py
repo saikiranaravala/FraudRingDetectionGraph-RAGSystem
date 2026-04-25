@@ -37,6 +37,23 @@ CLAUDE_MODEL        = LLM_MODEL
 # Keep backward-compat alias used in feedback.py EnvironmentError check
 ANTHROPIC_API_KEY   = OPENROUTER_API_KEY
 
+# ── LangSmith Configuration (monitoring & debugging) ────────────────────
+# LangSmith integrates with LangChain/LangGraph via environment variables.
+# Set LANGCHAIN_TRACING_V2=true to enable tracing to LangSmith dashboard.
+LANGSMITH_API_KEY        = os.getenv("LANGSMITH_API_KEY", "")
+LANGCHAIN_TRACING_V2     = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+LANGCHAIN_PROJECT        = os.getenv("LANGCHAIN_PROJECT", "FraudRingDetectionGraph-RAG")
+LANGSMITH_ENDPOINT       = os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+
+# Validate LangSmith configuration if tracing is enabled
+if LANGCHAIN_TRACING_V2 and not LANGSMITH_API_KEY:
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    _log.warning(
+        "LANGCHAIN_TRACING_V2=true but LANGSMITH_API_KEY is not set. "
+        "LangSmith tracing will not work. Set LANGSMITH_API_KEY in .env to enable."
+    )
+
 # ── Embeddings ────────────────────────────────────────────────────────
 # fastembed models (ONNX — no PyTorch, ~100 MB RAM total):
 #   BAAI/bge-small-en-v1.5:  384-dim, ~25 MB, fast — DEFAULT

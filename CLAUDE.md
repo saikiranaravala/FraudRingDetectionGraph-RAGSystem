@@ -114,6 +114,12 @@ EMBEDDING_MODEL=BAAI/bge-small-en-v1.5         # fastembed model (384-dim, ONNX)
 VECTOR_STORE_BACKEND=pinecone     # "local" or "pinecone"
 PINECONE_API_KEY=...
 PINECONE_INDEX=fraud-rings
+
+# ── LangSmith (Monitoring & Debugging) ───────────────────────
+LANGCHAIN_TRACING_V2=true                                     # enable tracing
+LANGSMITH_API_KEY=lsv2_pt_...                                # get from https://smith.langchain.com
+LANGCHAIN_PROJECT=FraudRingDetectionGraph-RAG
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 ```
 
 > `.env` is gitignored. Never commit credentials.
@@ -575,6 +581,57 @@ Four-tab investigator UI in `ui/streamlit_app.py`:
 | Stats & History | Total reviews, vector store size, F1 history table |
 
 The app reads `api_url` from `ui/.streamlit/secrets.toml` (Streamlit Cloud) or the sidebar input (local dev). All heavy computation runs in the FastAPI backend — the UI is request-only.
+
+---
+
+## LangSmith Monitoring & Debugging
+
+LangSmith integrates with LangChain/LangGraph to trace all pipeline execution and LLM calls.
+
+### Setup
+
+1. **Get API key**: Go to [smith.langchain.com](https://smith.langchain.com) → sign up (free) → copy API key
+2. **Update .env**:
+
+   ```env
+   LANGCHAIN_TRACING_V2=true
+   LANGSMITH_API_KEY=lsv2_pt_...
+   LANGCHAIN_PROJECT=FraudRingDetectionGraph-RAG
+   LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+   ```
+
+3. **No code changes required** — LangChain automatically traces when env vars are set
+
+### What gets traced
+
+- **LangGraph node execution** — each pipeline node (`retrieve_subgraph`, `find_analogous_rings`, `generate_reasoning`)
+  - Input/output states
+  - Execution duration
+  - Errors and exceptions
+
+- **LLM calls** — every OpenRouter/Claude API call
+  - Prompts and completions
+  - Token counts and costs
+  - Latency
+
+- **State transitions** — all state mutations and flow between nodes
+
+### Viewing traces
+
+1. Go to [smith.langchain.com](https://smith.langchain.com) → Project `FraudRingDetectionGraph-RAG`
+2. Each `/explain` or `/query` API call shows up as a trace in the dashboard
+3. Click a trace to inspect node inputs/outputs, errors, and token usage
+
+### Free tier limits
+
+- LangSmith free tier allows unlimited traces
+- 7-day retention (older traces are deleted)
+- No advanced features (feedback, annotations)
+
+### Development vs Production
+
+- **Local**: Set `LANGCHAIN_TRACING_V2=true` in `.env` to see traces during development
+- **Render**: Set the same env var in Render dashboard to trace production API calls
 
 ---
 

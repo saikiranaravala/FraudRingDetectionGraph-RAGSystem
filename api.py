@@ -35,6 +35,13 @@ logging.basicConfig(
 )
 log = logging.getLogger("api")
 
+# Log LangSmith tracing status on startup
+import os as _os
+if _os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true":
+    log.info("LangSmith tracing ENABLED — traces will be sent to LangSmith dashboard")
+else:
+    log.info("LangSmith tracing disabled (set LANGCHAIN_TRACING_V2=true to enable)")
+
 app = FastAPI(
     title="Fraud Ring Detection API",
     description="GraphRAG + LangGraph fraud investigation pipeline",

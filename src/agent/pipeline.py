@@ -15,6 +15,16 @@ Three-node agentic pipeline per the PRD §4.3 (Layer 3):
       Send subgraph + analogous rings to Claude with a structured prompt.
       Returns a citable investigation brief the investigator can interrogate.
 
+LangSmith Tracing
+─────────────────
+  When LANGCHAIN_TRACING_V2=true in .env, LangGraph automatically traces all node
+  executions and state transitions to LangSmith. This includes:
+    - Node run durations and inputs/outputs
+    - LLM call latencies and token usage
+    - Exception handling and error states
+  Traces appear in the LangSmith dashboard at https://smith.langchain.com
+  Requires: LANGSMITH_API_KEY, LANGCHAIN_PROJECT, LANGSMITH_ENDPOINT in .env
+
 The compiled graph can be invoked with just a claim_id:
 
     pipeline = build_pipeline()
