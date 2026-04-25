@@ -221,11 +221,11 @@ with tab_query:
     )
 
     example_questions = [
-        "Which fraud rings have a lawyer in 3 or more claims?",
-        "Show the top 10 claims by final suspicion score",
-        "Which customers share bank accounts with other customers?",
-        "How many claims are in each adjuster priority tier?",
-        "List witnesses who appear in more than 2 claims",
+        "Show fraud rings with the highest scores",
+        "Which lawyers appear in the most claims?",
+        "Find customers who share bank accounts",
+        "Which repair shops appear in the most fraud ring claims?",
+        "Show me high-risk claims that need investigation",
     ]
 
     with st.expander("Example questions"):

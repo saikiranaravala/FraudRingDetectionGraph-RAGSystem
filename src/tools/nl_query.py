@@ -45,25 +45,26 @@ FORBIDDEN_KEYWORDS = re.compile(
 )
 
 # Few-shot examples injected into the Cypher-generation prompt
+# Updated to match actual data patterns in the fraud graph
 FEW_SHOT_EXAMPLES = """
 Examples:
-Q: Show me all confirmed fraud rings
-A: MATCH (r:FraudRing {status: 'Confirmed'}) RETURN r.ring_id, r.ring_name, r.ring_score, r.member_count, r.total_claim_amount ORDER BY r.ring_score DESC LIMIT 25
+Q: Show me fraud rings with the highest scores
+A: MATCH (r:FraudRing)-[:RING_CONTAINS_CLAIM]->(c:Claim) RETURN r.ring_id, r.ring_name, r.ring_score, count(c) AS claim_count ORDER BY r.ring_score DESC LIMIT 25
 
-Q: Which witnesses appear in 3 or more claims?
-A: MATCH (w:Witness)<-[:HAS_WITNESS]-(c:Claim) WITH w, count(c) AS claim_count WHERE claim_count >= 3 RETURN w.full_name, claim_count, w.professional_witness_flag ORDER BY claim_count DESC LIMIT 25
+Q: Which lawyers appear in the most claims?
+A: MATCH (l:Lawyer)<-[:REPRESENTED_BY]-(c:Claim) RETURN l.full_name, l.known_to_siu, count(c) AS claim_count ORDER BY claim_count DESC LIMIT 25
 
-Q: Find customers who share a bank account
-A: MATCH (c1:Customer)-[s:SHARES_ATTRIBUTE]->(c2:Customer) WHERE s.attribute_type = 'bank_account' AND s.fraud_signal = 'CRITICAL' RETURN c1.full_name, c2.full_name, s.shared_value_hash LIMIT 25
-
-Q: What are the highest priority claims pending review?
-A: MATCH (c:Claim) WHERE c.final_suspicion_score >= 0.70 RETURN c.claim_id, c.final_suspicion_score, c.adjuster_priority_tier, c.fraud_reported, c.incident_state ORDER BY c.final_suspicion_score DESC LIMIT 25
+Q: Find customers who share bank accounts
+A: MATCH (c1:Customer)-[s:SHARES_ATTRIBUTE]->(c2:Customer) WHERE s.attribute_type = 'bank_account' AND s.fraud_signal = 'CRITICAL' RETURN c1.full_name, c2.full_name, s.fraud_signal LIMIT 25
 
 Q: Which repair shops appear in the most fraud ring claims?
-A: MATCH (s:RepairShop)<-[:REPAIRED_AT]-(c:Claim)<-[:RING_CONTAINS_CLAIM]-(r:FraudRing) WITH s, count(DISTINCT r) AS ring_count, count(c) AS claim_count RETURN s.name, ring_count, claim_count, s.fraud_flag ORDER BY ring_count DESC LIMIT 25
+A: MATCH (s:RepairShop)<-[:REPAIRED_AT]-(c:Claim)<-[:RING_CONTAINS_CLAIM]-(r:FraudRing) WITH s, count(DISTINCT r) AS ring_count, count(c) AS claim_count RETURN s.name, s.fraud_flag, ring_count, claim_count ORDER BY ring_count DESC LIMIT 25
 
-Q: Show me all claims linked to ring RING-001
-A: MATCH (r:FraudRing {ring_id: 'RING-001'})-[:RING_CONTAINS_CLAIM]->(c:Claim) RETURN c.claim_id, c.total_claim_amount, c.incident_state, c.fraud_reported LIMIT 25
+Q: Show me high-risk claims that need investigation
+A: MATCH (c:Claim) WHERE c.final_suspicion_score >= 0.70 RETURN c.claim_id, c.final_suspicion_score, c.incident_state, c.total_claim_amount ORDER BY c.final_suspicion_score DESC LIMIT 25
+
+Q: List all claims in fraud ring RING-002
+A: MATCH (r:FraudRing {ring_id: 'RING-002'})-[:RING_CONTAINS_CLAIM]->(c:Claim) RETURN c.claim_id, c.total_claim_amount, c.incident_state, c.final_suspicion_score LIMIT 25
 """
 
 
