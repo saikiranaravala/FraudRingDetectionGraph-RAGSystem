@@ -396,6 +396,7 @@ manual_override_flag = True if any([
 | **Oversampling** | SMOTE + ADASYN | Class imbalance correction at training time only. Never applied to val/test/inference. |
 | **Frontend** | Streamlit | 4-tab investigator UI: Investigate / Query / Feedback / Stats. Deployed on Streamlit Community Cloud (free). |
 | **Web API** | FastAPI + uvicorn | REST API wrapping the GraphRAG pipeline. Deployed on Render.com (free plan, 512 MB RAM, fastembed fits). |
+| **Observability** | LangSmith (optional) | LLM pipeline tracing & debugging. Traces all LangGraph node executions and Claude API calls. Free tier available. |
 | **ML Serving** | Amazon SageMaker | Model hosting, weekly retraining pipeline, A/B testing between model versions (Phase 4) |
 
 ---
